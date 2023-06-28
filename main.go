@@ -7,16 +7,15 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"time"
 )
 
 type WebhookPayload struct {
-	Producto string `json:"producto"`
+	Product string `json:"product_id"`
 }
 
 type ResponseData struct {
-	Total    int    `json:"TOTAL"`
-	WcCodigo string `json:"WC_CODIGO"`
+	Total interface{} `json:"total_stock"`
+	//WcCodigo string `json:"wc_code"`
 }
 
 func handleWebhook(w http.ResponseWriter, r *http.Request) {
@@ -33,21 +32,21 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-
+	log.Println(payload)
 	// Log the received payload
-	log.Println("Received webhook payload:")
-	log.Println("Producto:", payload.Producto)
+	log.Println("Received webhook payload")
+	log.Println("Producto:", payload.Product)
 
-	//Wait 5 seconds
-	time.Sleep(3 * time.Second)
+	//Wait 3 seconds
+	//time.Sleep(3 * time.Second)
 
 	//Get product data
-	productsgetURL := "https://api.appsheet.com/api/v2/apps/69d001e5-d43f-4dfe-a7ed-fbbe155ab9b8/tables/productos/Action"
-	findproduct := `{
+	stockgetURL := "https://api.appsheet.com/api/v2/apps/69d001e5-d43f-4dfe-a7ed-fbbe155ab9b8/tables/stock/Action"
+	find_in_stock := `{
 		"Action": "Find",
 		  "Properties": {"Locale": "en-US","Location": "47.623098, -122.330184","Timezone": "Pacific Standard Time","UserSettings": {"Option 1": "value1","Option 2": "value2"}},
-		"Rows": [{"PRODUCTO" : "` + payload.Producto + `"}]}`
-	get, err := http.NewRequest(http.MethodPost, productsgetURL, bytes.NewBufferString(findproduct))
+		"Rows": [{"product_id" : "` + payload.Product + `"}]}`
+	get, err := http.NewRequest(http.MethodPost, stockgetURL, bytes.NewBufferString(find_in_stock))
 	if err != nil {
 		log.Println("Error creating request to find the product ID and quantity:", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -58,23 +57,24 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 	get.Header.Set("ApplicationAccessKey", "V2-MbFFj-boUAV-MLqf1-Pqxgl-be4j3-WGRlm-dYVTO-aObJo")
 
 	client := http.DefaultClient
+	// Get product data
+	appsresp, err := client.Do(get)
 
-	asresp, err := client.Do(get)
 	if err != nil {
 		log.Println("Error geting product in Appsheet:", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	defer asresp.Body.Close()
+	defer appsresp.Body.Close()
 
-	if asresp.StatusCode != http.StatusOK {
-		log.Println("Unexpected status code from Appsheet:", asresp.StatusCode)
+	if appsresp.StatusCode != http.StatusOK {
+		log.Println("Unexpected status code from Appsheet:", appsresp.StatusCode)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	// Read the response body
-	body, err := ioutil.ReadAll(asresp.Body)
+	body, err := ioutil.ReadAll(appsresp.Body)
 	if err != nil {
 		log.Fatal("Error reading response body:", err)
 	}
@@ -90,12 +90,13 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 
 	// Access the first element and extract the values
 	total := responseData[0].Total
-	wcCodigo := responseData[0].WcCodigo
+	//wcCodigo := responseData[0].WcCodigo
 
 	// Print the values
 	log.Println("Total:", total)
-	log.Println("WC_CODIGO:", wcCodigo)
-
+	return
+	//log.Println("WC_CODIGO:", wcCodigo)
+	wcCodigo := "0"
 	// Update the WooCommerce product
 	wcURL := "https://www.energiaglobal.com.ar/wp-json/wc/v3/products/" + wcCodigo
 	wcPayload := `{"stock_quantity": ` + fmt.Sprint(total) + `}`
