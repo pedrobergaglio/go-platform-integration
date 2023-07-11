@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	//"log"
+	"log"
 	"net/http"
 	"os"
 )
@@ -93,14 +93,14 @@ func getProductID(wc_id string) (string, error) {
 	}
 
 	// Prepare the payload for finding the product ID and quantity
-	payload := fmt.Sprintf(`{
+	payload := `{
 			"Action": "Find",
 			"Properties": {
 				"Locale": "es-US",
 				"Timezone": "Argentina Standard Time",
 			},
 			"Rows": []
-		}`)
+		}`
 
 	//"Selector": "Filter("PLATFORMS", ISNOTBLANK([wc_id]))",
 
@@ -148,7 +148,7 @@ func getProductID(wc_id string) (string, error) {
 		}
 	}
 
-	return "", errors.New("Product searched correctly but not found in database")
+	return "", errors.New("product searched correctly but not found in database")
 }
 
 func postMovement(product_id string, quantity int, platform string) (string, error) {
@@ -193,4 +193,115 @@ func postMovement(product_id string, quantity int, platform string) (string, err
 	}
 
 	return convertToString(resp.StatusCode), nil
+}
+
+func getProductTotalStock(product_id string) (string, error) {
+
+	stockgetURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/STOCK/Action", os.Getenv("appsheet_id"))
+	find_in_stock := `{
+		"Action": "Find",
+		  "Properties": 
+		  	{"Locale": "en-US",
+			"Location": "47.623098, -122.330184",
+			"Timezone": "Pacific Standard Time",
+			"UserSettings": {
+				"Option 1": "value1",
+				"Option 2": "value2"}
+			},
+		"Rows": []}`
+	get, err := http.NewRequest(http.MethodPost, stockgetURL, bytes.NewBufferString(find_in_stock))
+	if err != nil {
+		return "", err
+	}
+
+	get.Header.Set("Content-Type", "application/json")
+	get.Header.Set("ApplicationAccessKey", os.Getenv("appsheet_key"))
+
+	client := http.DefaultClient
+	// Get product data
+	appsresp, err := client.Do(get)
+
+	if err != nil {
+		return "", err
+	}
+	defer appsresp.Body.Close()
+
+	if appsresp.StatusCode != http.StatusOK {
+		return "", errors.New(convertToString(appsresp.StatusCode))
+	}
+
+	// Read the response body
+	body, err := ioutil.ReadAll(appsresp.Body)
+	if err != nil {
+		log.Fatal("Error reading response body:", err)
+	}
+
+	// Define a struct to hold the response data
+	var responseData []stockData
+
+	// Unmarshal the JSON data into the struct
+	err = json.Unmarshal(body, &responseData)
+	if err != nil {
+		log.Fatal("Error unmarshaling response data:", err)
+	}
+	for _, item := range responseData {
+		if item.Product == product_id {
+			return item.Total, nil
+		}
+	}
+
+	return "", errors.New("product not found in stock table")
+
+}
+
+func getWCID(product_id string) (string, string) {
+
+	stockgetURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/PLATFORMS/Action", os.Getenv("appsheet_id"))
+	find_in_stock := `{
+		"Action": "Find",
+		  "Properties": {"Locale": "en-US","Location": "47.623098, -122.330184","Timezone": "Pacific Standard Time","UserSettings": {"Option 1": "value1","Option 2": "value2"}},
+		"Rows": []}`
+	get, err := http.NewRequest(http.MethodPost, stockgetURL, bytes.NewBufferString(find_in_stock))
+	if err != nil {
+		return "", fmt.Sprintf("Error creating request to find the product ID and quantity: %s", err)
+	}
+
+	get.Header.Set("Content-Type", "application/json")
+	get.Header.Set("ApplicationAccessKey", os.Getenv("appsheet_key"))
+
+	client := http.DefaultClient
+	// Get product data
+	appsresp, err := client.Do(get)
+	if err != nil {
+		return "", fmt.Sprintf("Error geting product in Appsheet: %s", err)
+	}
+	defer appsresp.Body.Close()
+
+	if err != nil {
+		return "", fmt.Sprintf("Unexpected status code from Appsheet: %d", appsresp.StatusCode)
+	}
+
+	// Read the response body
+	body, err := ioutil.ReadAll(appsresp.Body)
+	if err != nil {
+		log.Fatal("Error reading response body:", err)
+	}
+
+	// Define a struct to hold the response data
+	var PlatformData []WCData
+
+	// Unmarshal the JSON data into the struct
+	err = json.Unmarshal(body, &PlatformData)
+	if err != nil {
+		log.Fatal("Error unmarshaling response data:", err)
+	}
+
+	for _, item := range PlatformData {
+		if item.Product == product_id {
+			return item.WooID, ""
+		}
+	}
+
+	return "", "Product ID searched correctly in PLATFORMS but not found"
+
 }

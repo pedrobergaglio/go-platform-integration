@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -31,8 +30,13 @@ func loadConfig() {
 	}
 }
 
-type AppsheetWebhookPayload struct {
-	Product interface{} `json:"product_id"`
+type ASMovementWebhookPayload struct {
+	ProductID interface{} `json:"product_id"`
+}
+
+type ASPriceWebhookPayload struct {
+	ProductID interface{} `json:"product_id"`
+	SalePrice string      `json:"sale_price"`
 }
 
 type stockData struct {
@@ -45,7 +49,7 @@ type WCData struct {
 	Product string `json:"product_id"`
 }
 
-func handleAppsheetWebhook(w http.ResponseWriter, r *http.Request) {
+func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 	// Ensure that the request method is POST
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -53,139 +57,37 @@ func handleAppsheetWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse the incoming request body
-	var payload AppsheetWebhookPayload
+	var payload ASMovementWebhookPayload
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		log.Println("Error decoding payload:", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	// Log the received payload
-	log.Println("Received movement, product ID:", payload.Product)
+	log.Println("Received movement, product ID:", payload.ProductID)
 
 	//Wait 3 seconds
 	log.Println("Waiting to update...")
 	time.Sleep(2 * time.Second)
 
 	//Get product data
-	stockgetURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/STOCK/Action", os.Getenv("appsheet_id"))
-	find_in_stock := fmt.Sprintf(`{
-		"Action": "Find",
-		  "Properties": 
-		  	{"Locale": "en-US",
-			"Location": "47.623098, -122.330184",
-			"Timezone": "Pacific Standard Time",
-			"UserSettings": {
-				"Option 1": "value1",
-				"Option 2": "value2"}
-			},
-		"Rows": []}`)
-	get, err := http.NewRequest(http.MethodPost, stockgetURL, bytes.NewBufferString(find_in_stock))
+	total, err := getProductTotalStock(convertToString(payload.ProductID))
 	if err != nil {
-		log.Println("Error creating request to find the product ID and quantity:", err)
+		log.Println("Error getting product total stock:", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
-	get.Header.Set("Content-Type", "application/json")
-	get.Header.Set("ApplicationAccessKey", os.Getenv("appsheet_key"))
-
-	client := http.DefaultClient
-	// Get product data
-	appsresp, err := client.Do(get)
-
-	if err != nil {
-		log.Println("Error geting product in Appsheet:", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	defer appsresp.Body.Close()
-
-	if appsresp.StatusCode != http.StatusOK {
-		log.Println("Unexpected status code from Appsheet:", appsresp.StatusCode)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	// Read the response body
-	body, err := ioutil.ReadAll(appsresp.Body)
-	if err != nil {
-		log.Fatal("Error reading response body:", err)
-	}
-
-	// Define a struct to hold the response data
-	var responseData []stockData
-
-	// Unmarshal the JSON data into the struct
-	err = json.Unmarshal(body, &responseData)
-	if err != nil {
-		log.Fatal("Error unmarshaling response data:", err)
-	}
-	total := ""
-	for _, item := range responseData {
-		if item.Product == payload.Product {
-			total = item.Total
-		}
-	}
-
-	//wcCodigo := responseData[0].WcCodigo
 
 	// Print the values
 	log.Println("Total stock:", total)
 
 	//Get WOOCOMMERCE data
-	stockgetURL = fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/PLATFORMS/Action", os.Getenv("appsheet_id"))
-	find_in_stock = fmt.Sprintf(`{
-		"Action": "Find",
-		  "Properties": {"Locale": "en-US","Location": "47.623098, -122.330184","Timezone": "Pacific Standard Time","UserSettings": {"Option 1": "value1","Option 2": "value2"}},
-		"Rows": []}`)
-	get, err = http.NewRequest(http.MethodPost, stockgetURL, bytes.NewBufferString(find_in_stock))
-	if err != nil {
-		log.Println("Error creating request to find the product ID and quantity:", err)
+	woo_id, error := getWCID(convertToString(payload.ProductID))
+	if error != "" {
+		log.Println(error)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
-	get.Header.Set("Content-Type", "application/json")
-	get.Header.Set("ApplicationAccessKey", os.Getenv("appsheet_key"))
-
-	client = http.DefaultClient
-	// Get product data
-	appsresp, err = client.Do(get)
-
-	if err != nil {
-		log.Println("Error geting product in Appsheet:", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	defer appsresp.Body.Close()
-
-	if appsresp.StatusCode != http.StatusOK {
-		log.Println("Unexpected status code from Appsheet:", appsresp.StatusCode)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	// Read the response body
-	body, err = ioutil.ReadAll(appsresp.Body)
-	if err != nil {
-		log.Fatal("Error reading response body:", err)
-	}
-
-	// Define a struct to hold the response data
-	var PlatformData []WCData
-
-	// Unmarshal the JSON data into the struct
-	err = json.Unmarshal(body, &PlatformData)
-	if err != nil {
-		log.Fatal("Error unmarshaling response data:", err)
-	}
-	woo_id := ""
-	for _, item := range PlatformData {
-		if item.Product == payload.Product {
-			woo_id = item.WooID
-		}
-	}
-	//wcCodigo := responseData[0].WcCodigo
 
 	// Print the values
 	log.Println("Woocommerce ID:", woo_id)
@@ -204,6 +106,7 @@ func handleAppsheetWebhook(w http.ResponseWriter, r *http.Request) {
 	req.Header.Set("Content-Type", "application/json")
 	req.SetBasicAuth(os.Getenv("wc_client"), os.Getenv("wc_secret"))
 
+	client := http.DefaultClient
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Println("Error updating product in WooCommerce:", err)
@@ -225,13 +128,76 @@ func handleAppsheetWebhook(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func handleASPriceWebhook(w http.ResponseWriter, r *http.Request) {
+	// Ensure that the request method is POST
+	if r.Method != http.MethodPost {
+		log.Println(http.StatusMethodNotAllowed)
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Parse the incoming request body
+	var payload ASPriceWebhookPayload
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		log.Println("Error decoding payload:", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	// Log the received payload
+	log.Println("Updated price in product:", payload.ProductID)
+
+	//Get WOOCOMMERCE data
+	woo_id, error := getWCID(convertToString(payload.ProductID))
+	if error != "" {
+		log.Println("Error getting WC ID ", error)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Update the WooCommerce product
+	wcURL := "https://www.energiaglobal.com.ar/wp-json/wc/v3/products/" + fmt.Sprint(woo_id)
+	wcPayload := fmt.Sprintf(`{"regular_price": '%s'}`, fmt.Sprint(payload.SalePrice))
+
+	req, err := http.NewRequest(http.MethodPut, wcURL, bytes.NewBufferString(wcPayload))
+	if err != nil {
+		log.Println("Error creating request for WooCommerce:", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.SetBasicAuth(os.Getenv("wc_client"), os.Getenv("wc_secret"))
+
+	client := http.DefaultClient
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Println("Error updating product in WooCommerce:", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		log.Println("Unexpected status code from WooCommerce:", resp.StatusCode)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Write a success response if everything is processed successfully
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Webhook processed successfully"))
+	log.Println("Price updated")
+
+}
+
 func main() {
 
 	loadConfig()
 
 	// Register the webhook handler function with the default server mux
-	http.HandleFunc("/movimientos", handleAppsheetWebhook)
+	http.HandleFunc("/movimientos", handleASMovementWebhook)
 	http.HandleFunc("/woocommerce", handleWCWebhook)
+	http.HandleFunc("/price", handleASPriceWebhook)
 
 	// Start the server and specify the port to listen on
 	log.Println("Server listening on port 8080...")

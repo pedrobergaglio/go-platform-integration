@@ -56,6 +56,7 @@ func handleWCWebhook(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(body, &payload)
 	if err != nil {
 		log.Println("Error parsing request body:", err)
+		log.Println(body)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
