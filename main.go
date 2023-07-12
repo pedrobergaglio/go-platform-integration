@@ -198,6 +198,12 @@ func main() {
 	http.HandleFunc("/woocommerce", handleWCWebhook)
 	http.HandleFunc("/price", handleASPriceWebhook)
 
+	// Root route handler
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		// Write the desired text response
+		fmt.Fprintf(w, "ENERGÍA GLOBAL INTEGRATION SERVICE")
+	})
+
 	// Use PORT environment variable provided by Railway or default to 8080
 	port := ":" + os.Getenv("PORT")
 	if port == ":" {
@@ -206,5 +212,5 @@ func main() {
 
 	// Start the server and specify the host and port
 	log.Println("Server listening on", port)
-	log.Fatal(http.ListenAndServe("0.0.0.0"+port, nil))
+	log.Fatal(http.ListenAndServe("0.0.0.0:8080", nil))
 }
