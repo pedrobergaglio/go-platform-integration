@@ -205,7 +205,7 @@ func main() {
 	})
 
 	// Use PORT environment variable provided by Railway or default to 8080
-	port := ":" + os.Getenv("port")
+	port := ":" + os.Getenv("PORT")
 	if port == ":" {
 		port = ":8080"
 	}
