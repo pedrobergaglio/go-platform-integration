@@ -212,5 +212,5 @@ func main() {
 
 	// Start the server and specify the host and port
 	log.Println("Server listening on", port)
-	log.Fatal(http.ListenAndServe("0.0.0.0:8080", nil))
+	log.Fatal(http.ListenAndServe("0.0.0.0"+port, nil))
 }
