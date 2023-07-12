@@ -191,15 +191,20 @@ func handleASPriceWebhook(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-
 	loadConfig()
 
-	// Register the webhook handler function with the default server mux
+	// Register the webhook handler functions with the default server mux
 	http.HandleFunc("/movimientos", handleASMovementWebhook)
 	http.HandleFunc("/woocommerce", handleWCWebhook)
 	http.HandleFunc("/price", handleASPriceWebhook)
 
-	// Start the server and specify the port to listen on
-	log.Println("Server listening on port 8080...")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	// Use PORT environment variable provided by Railway or default to 8080
+	port := ":" + os.Getenv("PORT")
+	if port == ":" {
+		port = ":8080"
+	}
+
+	// Start the server and specify the host and port
+	log.Println("Server listening on", port)
+	log.Fatal(http.ListenAndServe("0.0.0.0"+port, nil))
 }
