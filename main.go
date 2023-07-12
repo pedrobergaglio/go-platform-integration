@@ -144,19 +144,19 @@ func handleASPriceWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Log the received payload
-	log.Println("Updated price in product:", payload.ProductID)
+	log.Println("Updated price product in Appsheet:", payload.ProductID)
 
 	//Get WOOCOMMERCE data
 	woo_id, error := getWCID(convertToString(payload.ProductID))
 	if error != "" {
-		log.Println("Error getting WC ID ", error)
+		log.Println("Error getting WC ID:", error)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	// Update the WooCommerce product
 	wcURL := "https://www.energiaglobal.com.ar/wp-json/wc/v3/products/" + fmt.Sprint(woo_id)
-	wcPayload := fmt.Sprintf(`{"regular_price": '%s'}`, fmt.Sprint(payload.SalePrice))
+	wcPayload := fmt.Sprintf(`{"regular_price": "%s"}`, fmt.Sprint(payload.SalePrice))
 
 	req, err := http.NewRequest(http.MethodPut, wcURL, bytes.NewBufferString(wcPayload))
 	if err != nil {
@@ -194,7 +194,7 @@ func main() {
 	loadConfig()
 
 	// Register the webhook handler functions with the default server mux
-	http.HandleFunc("/movimientos", handleASMovementWebhook)
+	http.HandleFunc("/movement", handleASMovementWebhook)
 	http.HandleFunc("/woocommerce", handleWCWebhook)
 	http.HandleFunc("/price", handleASPriceWebhook)
 
@@ -205,7 +205,7 @@ func main() {
 	})
 
 	// Use PORT environment variable provided by Railway or default to 8080
-	port := ":" + os.Getenv("PORT")
+	port := ":" + os.Getenv("port")
 	if port == ":" {
 		port = ":8080"
 	}

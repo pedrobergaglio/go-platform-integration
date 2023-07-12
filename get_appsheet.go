@@ -298,7 +298,10 @@ func getWCID(product_id string) (string, string) {
 
 	for _, item := range PlatformData {
 		if item.Product == product_id {
-			return item.WooID, ""
+			if item.WooID != "0" {
+				return item.WooID, ""
+			}
+			return "", "No linked product in Woocommerce"
 		}
 	}
 
