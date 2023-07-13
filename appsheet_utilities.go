@@ -438,7 +438,7 @@ func updateMeli(meli_id string, field string, value interface{}) string {
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Authorization", os.Getenv("meli_access_token"))
+	req.Header.Set("Authorization", "Bearer "+os.Getenv("MELI_ACCESS_TOKEN"))
 
 	client := http.DefaultClient
 	resp, err := client.Do(req)
