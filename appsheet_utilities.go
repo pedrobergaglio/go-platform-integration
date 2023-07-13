@@ -436,9 +436,11 @@ func updateMeli(meli_id string, field string, value interface{}) string {
 		return fmt.Sprint("Error creating request for MELI:", err)
 	}
 
+	auth := "Bearer " + os.Getenv("MELI_ACCESS_TOKEN")
+	log.Println(auth)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Authorization", "Bearer "+os.Getenv("MELI_ACCESS_TOKEN"))
+	req.Header.Set("Authorization", auth)
 
 	client := http.DefaultClient
 	resp, err := client.Do(req)
