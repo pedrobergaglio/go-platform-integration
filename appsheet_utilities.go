@@ -97,14 +97,14 @@ func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 	//log.Println("Woocommerce ID:", woo_id)
 
 	// Update the MELI product
-	error = updateMeli(meli_id, "price", total)
+	error = updateMeli(meli_id, "available_quantity", total)
 	if error != "" {
 		log.Println("Error updating stock in MELI:", fmt.Sprintf(error))
 		return
 	}
 
 	// Update the WooCommerce product
-	error = updateWC(wc_id, "regular_price", total)
+	error = updateWC(wc_id, "stock_quantity", total)
 	if error != "" {
 		log.Println("Error updating stock in WC:", fmt.Sprintf(error))
 		return
@@ -428,12 +428,12 @@ func updateWC(wc_id string, field string, value interface{}) string {
 
 func updateMeli(meli_id string, field string, value interface{}) string {
 
-	URL := "https://api.mercadolibre.com/items/MLA" + fmt.Sprint(meli_id)
-	payload := `{"` + fmt.Sprint(field) + `": ` + fmt.Sprint(value) + `}`
+	URL := fmt.Sprintf("https://api.mercadolibre.com/items/MLA%s", fmt.Sprint(meli_id))
+	payload := fmt.Sprintf(`{"%s": %s}`, fmt.Sprint(field), fmt.Sprint(value))
 
 	req, err := http.NewRequest(http.MethodPut, URL, bytes.NewBufferString(payload))
 	if err != nil {
-		return fmt.Sprintf("Error creating request for MELI:", err)
+		return fmt.Sprint("Error creating request for MELI:", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -443,12 +443,12 @@ func updateMeli(meli_id string, field string, value interface{}) string {
 	client := http.DefaultClient
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Sprintf("Error updating product in MELI:", err)
+		return fmt.Sprint("Error updating product in MELI:", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Sprintf("Unexpected status code from MELI:", resp.StatusCode)
+		return fmt.Sprint("Unexpected status code from MELI:", resp.StatusCode)
 	}
 
 	return ""
