@@ -1,6 +1,7 @@
 package main
 
 /*
+COMPRADOR
 {
 	"id":1422812884,
 	"email":"test_user_941471677@testuser.com",
@@ -8,6 +9,33 @@ package main
 	"site_status":"active",
 	"password":"nT3xqyQeup"
 	}
+*/
+
+/*
+VENDEDOR
+{
+	"id":1423001750,
+	"email":"test_user_275613916@testuser.com",
+	"nickname":"TESTUSER275613916",
+	"site_status":"active",
+	"password":"gzoLcRK5SJ"
+}
+*/
+
+/*
+curl -X PUT -H 'Authorization: Bearer $ACCESS_TOKEN' -H "Content-Type: application/json" -H "Accept: application/json" -d
+{
+  "available_quantity": 1
+}
+https://api.mercadolibre.com/items/$ITEM_ID
+*/
+
+/*
+curl -X POST -H 'Authorization: Bearer $ACCESS_TOKEN' -H "Content-Type: application/json" -H "Accept: application/json" -d
+{
+  "id": "gold"
+}
+https://api.mercadolibre.com/items/$ITEM_ID/listing_type
 */
 
 import (
@@ -68,7 +96,7 @@ func main() {
 		log.Fatal("There was an error refreshing the MELI token:", err)
 	}
 
-	createUser()
+	//createUser()
 
 	// Register the webhook handler functions with the default server mux
 	http.HandleFunc("/movement", handleASMovementWebhook)
