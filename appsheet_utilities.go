@@ -430,6 +430,8 @@ func updateMeli(meli_id string, field string, value interface{}) string {
 
 	URL := fmt.Sprintf("https://api.mercadolibre.com/items/MLA%s", fmt.Sprint(meli_id))
 	payload := fmt.Sprintf(`{"%s": %s}`, fmt.Sprint(field), fmt.Sprint(value))
+	log.Println(URL)
+	log.Println(payload)
 
 	req, err := http.NewRequest(http.MethodPut, URL, bytes.NewBufferString(payload))
 	if err != nil {
@@ -437,10 +439,10 @@ func updateMeli(meli_id string, field string, value interface{}) string {
 	}
 
 	auth := "Bearer " + os.Getenv("MELI_ACCESS_TOKEN")
-	log.Println(auth)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Authorization", auth)
+	log.Println(req.Header.Get("Authorization"))
 
 	client := http.DefaultClient
 	resp, err := client.Do(req)
