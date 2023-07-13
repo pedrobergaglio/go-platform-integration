@@ -83,7 +83,7 @@ func handleWCWebhook(w http.ResponseWriter, r *http.Request) {
 		log.Println("Woocommerce Product ID:", item.ProductID)
 		log.Println("Quantity:", item.Quantity)
 
-		product_id, err := getProductID(item.ProductID)
+		product_id, err := productIDFromWC(item.ProductID)
 		if err != nil {
 			log.Println("Error finding product in database or connecting to it:", err)
 			w.WriteHeader(http.StatusInternalServerError)

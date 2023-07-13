@@ -38,6 +38,17 @@ curl -X POST -H 'Authorization: Bearer $ACCESS_TOKEN' -H "Content-Type: applicat
 https://api.mercadolibre.com/items/$ITEM_ID/listing_type
 */
 
+/*
+{
+  "access_token": "APP_USR-3917704976553080-071313-550a4cafab3ddf64b95902946e6078b4-1423001750",
+  "token_type": "Bearer",
+  "expires_in": 21600,
+  "scope": "offline_access read write",
+  "user_id": 1423001750,
+  "refresh_token": "TG-64b0375fea147c0001850ea2-1423001750"
+}
+*/
+
 import (
 	"bytes"
 	"fmt"
@@ -91,12 +102,10 @@ func main() {
 
 	loadConfig()
 
-	err := refreshToken()
-	if err != nil {
-		log.Fatal("There was an error refreshing the MELI token:", err)
-	}
+	//os.Setenv("meli_refresh_token", "TG-64b0412c10cb63000102f83a-139122415")
 
-	//createUser()
+	// Start a background goroutine to periodically check token expiration and refresh if needed
+	go refreshTokenPeriodically()
 
 	// Register the webhook handler functions with the default server mux
 	http.HandleFunc("/movement", handleASMovementWebhook)
@@ -119,3 +128,20 @@ func main() {
 	log.Println("Server listening on", port)
 	log.Fatal(http.ListenAndServe("0.0.0.0"+port, nil))
 }
+
+/*
+func getItems() {
+
+	accessToken := os.Getenv("meli_access_token")
+
+	// Define the request URL and payload
+	url := "https://api.mercadolibre.com/items/MLA1449065018"
+	payload := fmt.Sprintf(`{
+		"grant_type": "refresh_token",
+		"client_id": "3917704976553080",
+		"client_secret": "6VuqfhmGawIqjEmp7pzgFhyTSChQjhl4",
+		"refresh_token": "%s"
+	}`, accessToken)
+
+}
+*/

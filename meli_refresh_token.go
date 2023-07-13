@@ -3,10 +3,13 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 type TokenResponse struct {
@@ -58,6 +61,10 @@ func refreshToken() error {
 		return err
 	}
 
+	if "" == tokenResponse.AccessToken || "" == tokenResponse.RefreshToken {
+		return errors.New("empty variables returned")
+	}
+
 	err = os.Setenv("MELI_ACCESS_TOKEN", tokenResponse.AccessToken)
 	if err != nil {
 		return err
@@ -72,4 +79,22 @@ func refreshToken() error {
 	fmt.Println("New Access Token:", tokenResponse.AccessToken)
 
 	return nil
+}
+
+func refreshTokenPeriodically() {
+	refreshInterval := time.Hour * 5 // Refresh the token every hour (adjust as needed)
+
+	for {
+		err := refreshToken()
+		if err != nil {
+			log.Println("Retrying. There was an error refreshing the MELI token:", err)
+			err := refreshToken()
+			if err != nil {
+				log.Fatal("There was an error refreshing the MELI token:", err)
+			}
+		}
+
+		// Wait for the refresh interval
+		time.Sleep(refreshInterval)
+	}
 }
