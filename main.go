@@ -69,7 +69,7 @@ func createUser() {
 	// Create the HTTP request
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBufferString(payload))
 	if err != nil {
-		fmt.Println("req")
+		fmt.Println(req)
 		return
 	}
 
@@ -111,6 +111,7 @@ func main() {
 	http.HandleFunc("/movement", handleASMovementWebhook)
 	http.HandleFunc("/woocommerce", handleWCWebhook)
 	http.HandleFunc("/price", handleASPriceWebhook)
+	http.HandleFunc("/meli", handleMeliWebhook)
 
 	// Root route handler
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -125,7 +126,7 @@ func main() {
 	}
 
 	// Start the server and specify the host and port
-	log.Println("Server listening on", port)
+	log.Println("server listening on", port)
 	log.Fatal(http.ListenAndServe("0.0.0.0"+port, nil))
 }
 

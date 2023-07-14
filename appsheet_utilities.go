@@ -21,14 +21,14 @@ func loadConfig() {
 
 	err := viper.ReadInConfig() // Read the configuration file
 	if err != nil {
-		log.Fatalf("Failed to read configuration file: %s", err)
+		log.Fatalf("failed to read configuration file: %s", err)
 	}
 
 	// Set environment variables based on the configuration values
 	for key, value := range viper.AllSettings() {
 		//log.Println("adding ", key)
 		if err := os.Setenv(key, value.(string)); err != nil {
-			log.Fatalf("Failed to set environment variable %s: %s", key, err)
+			log.Fatalf("failed to set environment variable %s: %s", key, err)
 		}
 	}
 }
@@ -97,27 +97,35 @@ func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 	//log.Println("Woocommerce ID:", woo_id)
 
 	// Update the MELI product
-	error = updateMeli(meli_id, "available_quantity", total)
-	if error != "" {
-		log.Println("Error updating stock in MELI:", fmt.Sprintf(error))
-		return
+	if meli_id != "0" {
+		error = updateMeli(meli_id, "available_quantity", total)
+		if error != "" {
+			log.Println("error updating stock in MELI:", fmt.Sprintf(error))
+			return
+		} else {
+			log.Println("entro meli")
+		}
 	} else {
-		log.Println("entro meli")
+		log.Println("product not linked to meli")
 	}
 
 	// Update the WooCommerce product
-	error = updateWC(wc_id, "stock_quantity", total)
-	if error != "" {
-		log.Println("Error updating stock in WC:", fmt.Sprintf(error))
-		return
+	if wc_id != "0" {
+		error = updateWC(wc_id, "stock_quantity", total)
+		if error != "" {
+			log.Println("error updating stock in WC:", fmt.Sprintf(error))
+			return
+		} else {
+			log.Println("entro wc")
+		}
 	} else {
-		log.Println("entro wc")
+		log.Println("product not linked to wc")
 	}
 
 	// Write a success response if everything is processed successfully
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Webhook processed successfully"))
-	log.Println("Movement processed")
+	w.Write([]byte("webhook processed successfully"))
+	log.Println("movement processed")
 
 }
 
@@ -132,12 +140,12 @@ func handleASPriceWebhook(w http.ResponseWriter, r *http.Request) {
 	// Parse the incoming request body
 	var payload ASPriceWebhookPayload
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		log.Println("Error decoding payload:", err)
+		log.Println("error decoding payload:", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	// Log the received payload
-	log.Println("Updated price product in Appsheet:", payload.ProductID)
+	log.Println("updated price product in Appsheet:", payload.ProductID)
 
 	//Get platforms data
 	meli_id, wc_id, error := getPlatformsID(convertToString(payload.ProductID))
@@ -165,7 +173,7 @@ func handleASPriceWebhook(w http.ResponseWriter, r *http.Request) {
 	if wc_id != "0" {
 		error = updateWC(wc_id, "regular_price", `"`+payload.SalePrice+`"`)
 		if error != "" {
-			log.Println("Error updating Woocommerce price:", error)
+			log.Println("error updating Woocommerce price:", error)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		} else {
@@ -177,7 +185,7 @@ func handleASPriceWebhook(w http.ResponseWriter, r *http.Request) {
 
 	// Write a success response if everything is processed successfully
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Webhook processed successfully"))
+	w.Write([]byte("webhook processed successfully"))
 	log.Println("price updated")
 
 }
@@ -331,7 +339,7 @@ func getProductTotalStock(product_id string) (string, error) {
 	// Read the response body
 	body, err := ioutil.ReadAll(appsresp.Body)
 	if err != nil {
-		log.Fatal("Error reading response body:", err)
+		log.Fatal("error reading response body:", err)
 	}
 
 	// Define a struct to hold the response data
@@ -340,7 +348,7 @@ func getProductTotalStock(product_id string) (string, error) {
 	// Unmarshal the JSON data into the struct
 	err = json.Unmarshal(body, &responseData)
 	if err != nil {
-		log.Fatal("Error unmarshaling response data:", err)
+		log.Fatal("error unmarshaling response data:", err)
 	}
 	for _, item := range responseData {
 		if item.Product == product_id {
@@ -371,18 +379,18 @@ func getPlatformsID(product_id string) (string, string, string) {
 	// Get product data
 	appsresp, err := client.Do(get)
 	if err != nil {
-		return "", "", fmt.Sprintf("Error geting product in Appsheet: %s", err)
+		return "", "", fmt.Sprintf("error geting product in Appsheet: %s", err)
 	}
 	defer appsresp.Body.Close()
 
 	if err != nil {
-		return "", "", fmt.Sprintf("Unexpected status code from Appsheet: %d", appsresp.StatusCode)
+		return "", "", fmt.Sprintf("unexpected status code from Appsheet: %d", appsresp.StatusCode)
 	}
 
 	// Read the response body
 	body, err := ioutil.ReadAll(appsresp.Body)
 	if err != nil {
-		log.Fatal("Error reading response body:", err)
+		log.Fatal("error reading response body:", err)
 	}
 
 	// Define a struct to hold the response data
@@ -391,7 +399,7 @@ func getPlatformsID(product_id string) (string, string, string) {
 	// Unmarshal the JSON data into the struct
 	err = json.Unmarshal(body, &PlatformData)
 	if err != nil {
-		log.Fatal("Error unmarshaling response data:", err)
+		log.Fatal("error unmarshaling response data:", err)
 	}
 
 	for _, item := range PlatformData {
@@ -409,12 +417,12 @@ func getPlatformsID(product_id string) (string, string, string) {
 
 func updateWC(wc_id string, field string, value interface{}) string {
 
-	wcURL := "https://www.energiaglobal.com.ar/wp-json/wc/v3/products/" + fmt.Sprint(wc_id)
-	wcPayload := `{"` + fmt.Sprint(field) + `": ` + fmt.Sprint(value) + `}`
+	wcURL := fmt.Sprintf("https://www.energiaglobal.com.ar/wp-json/wc/v3/products/%s", fmt.Sprint(wc_id))
+	wcPayload := fmt.Sprintf(`{"%s": %s}`, fmt.Sprint(field), fmt.Sprint(value))
 
 	req, err := http.NewRequest(http.MethodPut, wcURL, bytes.NewBufferString(wcPayload))
 	if err != nil {
-		return "Error creating request for WooCommerce:" + fmt.Sprint(err)
+		return "error creating request for WooCommerce:" + fmt.Sprint(err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -423,12 +431,12 @@ func updateWC(wc_id string, field string, value interface{}) string {
 	client := http.DefaultClient
 	resp, err := client.Do(req)
 	if err != nil {
-		return "Error updating product in WooCommerce:" + fmt.Sprint(err)
+		return "error updating product in WooCommerce:" + fmt.Sprint(err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "Unexpected status code from WooCommerce:" + fmt.Sprint(resp.StatusCode)
+		return "unexpected status code from WooCommerce:" + fmt.Sprint(resp.StatusCode)
 	}
 
 	return ""
@@ -438,29 +446,26 @@ func updateMeli(meli_id string, field string, value interface{}) string {
 
 	URL := fmt.Sprintf("https://api.mercadolibre.com/items/MLA%s", fmt.Sprint(meli_id))
 	payload := fmt.Sprintf(`{"%s": %s}`, fmt.Sprint(field), fmt.Sprint(value))
-	log.Println(URL)
-	log.Println(payload)
 
 	req, err := http.NewRequest(http.MethodPut, URL, bytes.NewBufferString(payload))
 	if err != nil {
-		return "Error creating request for MELI:" + fmt.Sprint(err)
+		return "error creating request for MELI:" + fmt.Sprint(err)
 	}
 
 	auth := "Bearer " + os.Getenv("MELI_ACCESS_TOKEN")
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Authorization", auth)
-	log.Println(req.Header.Get("Authorization"))
 
 	client := http.DefaultClient
 	resp, err := client.Do(req)
 	if err != nil {
-		return "Error updating product in MELI:" + fmt.Sprint(err)
+		return "error updating product in MELI:" + fmt.Sprint(err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "Unexpected status code from MELI:" + fmt.Sprint(resp.StatusCode)
+		return "unexpected status code from MELI:" + fmt.Sprint(resp.StatusCode)
 	}
 
 	return ""

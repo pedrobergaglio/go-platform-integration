@@ -75,8 +75,8 @@ func refreshToken() error {
 		return err
 	}
 
-	fmt.Println("New Refresh Token:", tokenResponse.RefreshToken)
-	fmt.Println("New Access Token:", tokenResponse.AccessToken)
+	fmt.Println("new refresh token:", tokenResponse.RefreshToken)
+	fmt.Println("new access token:", tokenResponse.AccessToken)
 
 	return nil
 }
@@ -87,10 +87,10 @@ func refreshTokenPeriodically() {
 	for {
 		err := refreshToken()
 		if err != nil {
-			log.Println("Retrying. There was an error refreshing the MELI token:", err)
+			log.Println("retrying. there was an error refreshing the meli token:", err)
 			err := refreshToken()
 			if err != nil {
-				log.Fatal("There was an error refreshing the MELI token:", err)
+				log.Fatal("there was an error refreshing the meli token:", err)
 			}
 		}
 

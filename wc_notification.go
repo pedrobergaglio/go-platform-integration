@@ -35,7 +35,7 @@ type WCWebhookPayload struct {
 
 func handleWCWebhook(w http.ResponseWriter, r *http.Request) {
 
-	log.Println("Received Woocommerce order notification")
+	log.Println("received wc order notification")
 
 	// Ensure that the request method is POST
 	if r.Method != http.MethodPost {
@@ -46,7 +46,7 @@ func handleWCWebhook(w http.ResponseWriter, r *http.Request) {
 	// Read the request body
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Println("Error reading request body:", err)
+		log.Println("error reading request body:", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -55,18 +55,18 @@ func handleWCWebhook(w http.ResponseWriter, r *http.Request) {
 	var payload WCWebhookPayload
 	err = json.Unmarshal(body, &payload)
 	if err != nil {
-		log.Println("Error parsing request body:", err)
+		log.Println("error parsing request body:", err)
 		log.Println(body)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	// Create a slice to store the items
-	var items []WCItem
+	var items []MeliItem
 
 	// Iterate over the line_items and save the product_id and quantity
 	for _, lineItem := range payload.LineItems {
-		item := WCItem{
+		item := MeliItem{
 			ProductID: convertToString(lineItem.ProductID),
 			Quantity:  lineItem.Quantity,
 		}
@@ -74,25 +74,25 @@ func handleWCWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(items) == 0 {
-		log.Println("No items found")
+		log.Println("no items received in notification")
 	}
 	// Process the webhook request or perform any desired actions using the items slice
 
 	// Print the items
 	for _, item := range items {
-		log.Println("Woocommerce Product ID:", item.ProductID)
-		log.Println("Quantity:", item.Quantity)
+		log.Println("product_id:", item.ProductID)
+		log.Println("quantity:", item.Quantity)
 
 		product_id, err := productIDFromWC(item.ProductID)
 		if err != nil {
-			log.Println("Error finding product in database or connecting to it:", err)
+			log.Println("error finding product in database or connecting to it:", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
 		_, err = postMovement(product_id, item.Quantity, "Woocommerce")
 		if err != nil {
-			log.Println("Error posting movement:", err)
+			log.Println("error posting movement:", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -104,6 +104,6 @@ func handleWCWebhook(w http.ResponseWriter, r *http.Request) {
 
 	// Respond with a success status
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Webhook processed successfully"))
-	log.Println("Woocommerce notification processed")
+	w.Write([]byte("webhook processed successfully"))
+	log.Println("woocommerce notification processed")
 }
