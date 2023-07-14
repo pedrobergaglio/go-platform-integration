@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 )
 
 type Notification struct {
@@ -60,9 +61,18 @@ func handleMeliWebhook(w http.ResponseWriter, r *http.Request) {
 
 	//Get order info
 
-	order_link := notification.OrderIDLink
+	if notification.OrderIDLink == os.Getenv("last_order_id_link") {
+		log.Println("same notification received")
+		return
+	}
 
-	URL := fmt.Sprintf("https://api.mercadolibre.com%s", fmt.Sprint(order_link))
+	err = os.Setenv("last_order_id_link", notification.OrderIDLink)
+	if err != nil {
+		log.Println("failed to set env last_order_id_link:", err)
+		return
+	}
+
+	URL := fmt.Sprintf("https://api.mercadolibre.com%s", notification.OrderIDLink)
 
 	req, err := http.NewRequest(http.MethodGet, URL, nil)
 	if err != nil {
@@ -123,12 +133,15 @@ func handleMeliWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, item := range items {
+
+		item.MeliID = strings.TrimPrefix(item.MeliID, "MLA")
+
 		log.Printf("meli_id: MLA%s", item.MeliID)
 		log.Println("quantity:", item.Quantity)
 
 		product_id, err := productIDFromMeli(item.MeliID)
 		if err != nil {
-			log.Println("error finding product in database or connecting to it:", err)
+			log.Println("error finding product in database:", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -139,6 +152,8 @@ func handleMeliWebhook(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+
+		log.Println("meli notification processed")
 
 	}
 

@@ -85,7 +85,7 @@ func handleWCWebhook(w http.ResponseWriter, r *http.Request) {
 
 		product_id, err := productIDFromWC(item.MeliID)
 		if err != nil {
-			log.Println("error finding product in database or connecting to it:", err)
+			log.Println("error finding product in database:", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
