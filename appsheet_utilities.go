@@ -100,7 +100,7 @@ func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 	if meli_id != "0" {
 		error = updateMeli(meli_id, "available_quantity", total)
 		if error != "" {
-			log.Println("error updating stock in MELI:", error)
+			log.Println("error updating stock in meli:", error)
 			return
 		} else {
 			log.Println("entro meli")
@@ -449,7 +449,7 @@ func updateMeli(meli_id string, field string, value interface{}) string {
 
 	req, err := http.NewRequest(http.MethodPut, URL, bytes.NewBufferString(payload))
 	if err != nil {
-		return "error creating request for MELI:" + fmt.Sprint(err)
+		return "error creating request for meli:" + fmt.Sprint(err)
 	}
 
 	auth := "Bearer " + os.Getenv("MELI_ACCESS_TOKEN")
@@ -460,12 +460,12 @@ func updateMeli(meli_id string, field string, value interface{}) string {
 	client := http.DefaultClient
 	resp, err := client.Do(req)
 	if err != nil {
-		return "error updating product in MELI:" + fmt.Sprint(err)
+		return "error updating product in meli:" + fmt.Sprint(err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "unexpected status code from MELI:" + fmt.Sprint(resp.StatusCode)
+		return "unexpected status code from meli:" + fmt.Sprint(resp.StatusCode)
 	}
 
 	return ""

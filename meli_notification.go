@@ -2,12 +2,18 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"os"
 )
 
-type Response struct {
+type Notification struct {
+	OrderIDLink string `json:"resource"`
+}
+
+type orderData struct {
 	OrderItems []OrderItem `json:"order_items"`
 }
 
@@ -45,7 +51,55 @@ func handleMeliWebhook(w http.ResponseWriter, r *http.Request) {
 
 	log.Print(string(body))
 
-	var response Response
+	var notification Notification
+	err = json.Unmarshal(body, &notification)
+	if err != nil {
+		log.Println("error unmarshaling request body:", err)
+		return
+	}
+
+	//Get order info
+
+	order_link := notification.OrderIDLink
+
+	URL := fmt.Sprintf("https://api.mercadolibre.com%s", fmt.Sprint(order_link))
+
+	req, err := http.NewRequest(http.MethodGet, URL, nil)
+	if err != nil {
+		log.Println("failed to create request:", err)
+		return
+	}
+
+	auth := "Bearer " + os.Getenv("MELI_ACCESS_TOKEN")
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Authorization", auth)
+
+	client := http.DefaultClient
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Println("error getting order info:", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		log.Println("unexpected status code from meli:" + fmt.Sprint(resp.StatusCode))
+		return
+	}
+
+	///////////////////////////////////////////////////////////////
+
+	//Process order info
+
+	// Read the request body
+	body, err = io.ReadAll(resp.Body)
+	if err != nil {
+		log.Println("error reading request body:", err)
+		return
+	}
+
+	var response orderData
 	err = json.Unmarshal(body, &response)
 	if err != nil {
 		log.Println("error unmarshaling request body:", err)
