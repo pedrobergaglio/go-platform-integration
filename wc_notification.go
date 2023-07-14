@@ -4,7 +4,7 @@ import (
 	//"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	//"time"
@@ -44,7 +44,7 @@ func handleWCWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Read the request body
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Println("error reading request body:", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -67,8 +67,8 @@ func handleWCWebhook(w http.ResponseWriter, r *http.Request) {
 	// Iterate over the line_items and save the product_id and quantity
 	for _, lineItem := range payload.LineItems {
 		item := MeliItem{
-			ProductID: convertToString(lineItem.ProductID),
-			Quantity:  lineItem.Quantity,
+			MeliID:   convertToString(lineItem.ProductID),
+			Quantity: lineItem.Quantity,
 		}
 		items = append(items, item)
 	}
@@ -80,10 +80,10 @@ func handleWCWebhook(w http.ResponseWriter, r *http.Request) {
 
 	// Print the items
 	for _, item := range items {
-		log.Println("product_id:", item.ProductID)
+		log.Println("wc_id:", item.MeliID)
 		log.Println("quantity:", item.Quantity)
 
-		product_id, err := productIDFromWC(item.ProductID)
+		product_id, err := productIDFromWC(item.MeliID)
 		if err != nil {
 			log.Println("error finding product in database or connecting to it:", err)
 			w.WriteHeader(http.StatusInternalServerError)

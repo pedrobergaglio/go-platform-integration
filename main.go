@@ -50,14 +50,13 @@ https://api.mercadolibre.com/items/$ITEM_ID/listing_type
 */
 
 import (
-	"bytes"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 )
 
+/*
 func createUser() {
 
 	// Define the request URL and payload
@@ -89,14 +88,14 @@ func createUser() {
 	defer resp.Body.Close()
 
 	// Read the response body
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println("body")
 		return
 	}
 
 	fmt.Println(string(body))
-}
+}*/
 
 func main() {
 

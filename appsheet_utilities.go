@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -100,7 +100,7 @@ func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 	if meli_id != "0" {
 		error = updateMeli(meli_id, "available_quantity", total)
 		if error != "" {
-			log.Println("error updating stock in MELI:", fmt.Sprintf(error))
+			log.Println("error updating stock in MELI:", error)
 			return
 		} else {
 			log.Println("entro meli")
@@ -113,7 +113,7 @@ func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 	if wc_id != "0" {
 		error = updateWC(wc_id, "stock_quantity", total)
 		if error != "" {
-			log.Println("error updating stock in WC:", fmt.Sprintf(error))
+			log.Println("error updating stock in WC:", error)
 			return
 		} else {
 			log.Println("entro wc")
@@ -236,7 +236,7 @@ func productIDFromWC(wc_id string) (string, error) {
 	}
 
 	// Read the response body
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("failed to read response body: %v", err)
 	}
@@ -337,7 +337,7 @@ func getProductTotalStock(product_id string) (string, error) {
 	}
 
 	// Read the response body
-	body, err := ioutil.ReadAll(appsresp.Body)
+	body, err := io.ReadAll(appsresp.Body)
 	if err != nil {
 		log.Fatal("error reading response body:", err)
 	}
@@ -388,7 +388,7 @@ func getPlatformsID(product_id string) (string, string, string) {
 	}
 
 	// Read the response body
-	body, err := ioutil.ReadAll(appsresp.Body)
+	body, err := io.ReadAll(appsresp.Body)
 	if err != nil {
 		log.Fatal("error reading response body:", err)
 	}
@@ -469,4 +469,72 @@ func updateMeli(meli_id string, field string, value interface{}) string {
 	}
 
 	return ""
+}
+
+func productIDFromMeli(meli_id string) (string, error) {
+
+	// Define the data struct for the response
+	type ResponseData struct {
+		AppsheetProductID string `json:"product_id"`
+		AppsheetMeliID    string `json:"meli_id"`
+	}
+
+	// Prepare the payload for finding the product ID and quantity
+	payload := `{
+			"Action": "Find",
+			"Properties": {
+				"Locale": "es-US",
+				"Timezone": "Argentina Standard Time",
+			},
+			"Rows": []
+		}`
+
+	//"Selector": "Filter("PLATFORMS", ISNOTBLANK([wc_id]))",
+
+	// Create the request
+	requestURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/PLATFORMS/Action", os.Getenv("appsheet_id"))
+
+	req, err := http.NewRequest(http.MethodPost, requestURL, bytes.NewBufferString(payload))
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %v", err)
+	}
+
+	// Set request headers
+	key := os.Getenv("appsheet_key")
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("ApplicationAccessKey", key)
+
+	// Send the request
+	client := http.DefaultClient
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to send request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Check the response status code
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	// Read the response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read response body: %v", err)
+	}
+
+	// Unmarshal the JSON data into the struct
+	var responseData []ResponseData
+	err = json.Unmarshal(body, &responseData)
+	if err != nil {
+		return "", fmt.Errorf("failed to unmarshal response data: %v", err)
+	}
+
+	for _, item := range responseData {
+		if item.AppsheetMeliID == meli_id {
+			return item.AppsheetProductID, nil
+		}
+	}
+
+	return "", errors.New("product searched correctly but not found in database")
 }

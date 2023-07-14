@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -49,7 +49,7 @@ func refreshToken() error {
 	defer resp.Body.Close()
 
 	// Read the response body
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
@@ -61,7 +61,7 @@ func refreshToken() error {
 		return err
 	}
 
-	if "" == tokenResponse.AccessToken || "" == tokenResponse.RefreshToken {
+	if tokenResponse.AccessToken == "" || tokenResponse.RefreshToken == "" {
 		return errors.New("empty variables returned")
 	}
 

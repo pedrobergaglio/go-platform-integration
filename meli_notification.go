@@ -1,26 +1,29 @@
 package main
 
 import (
-	//"bytes"
-
-	"io/ioutil"
+	"encoding/json"
+	"io"
 	"log"
 	"net/http"
-	//"time"
 )
 
-type MeliItem struct {
-	ProductID string
-	Quantity  int
+type Response struct {
+	OrderItems []OrderItem `json:"order_items"`
 }
 
-/*
-type WCWebhookPayload struct {
-	LineItems []struct {
-		ProductID interface{} `json:"product_id"`
-		Quantity  int         `json:"quantity"`
-	} `json:"line_items"`
-}*/
+type OrderItem struct {
+	Item     Item `json:"item"`
+	Quantity int  `json:"quantity"`
+}
+
+type Item struct {
+	ID string `json:"id"`
+}
+
+type MeliItem struct {
+	MeliID   string
+	Quantity int
+}
 
 func handleMeliWebhook(w http.ResponseWriter, r *http.Request) {
 
@@ -33,7 +36,7 @@ func handleMeliWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Read the request body
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Println("error reading request body:", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -41,65 +44,56 @@ func handleMeliWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Print(string(body))
-	/*
-	   // Parse the request body into the WebhookPayload struct
-	   var payload WCWebhookPayload
-	   err = json.Unmarshal(body, &payload)
 
-	   	if err != nil {
-	   		log.Println("error parsing request body:", err)
-	   		log.Println(body)
-	   		w.WriteHeader(http.StatusBadRequest)
-	   		return
-	   	}
+	var response Response
+	err = json.Unmarshal(body, &response)
+	if err != nil {
+		log.Println("error unmarshaling request body:", err)
+	}
 
-	   // Create a slice to store the items
-	   var items []MeliItem
+	// Create a slice to store the items
+	var items []MeliItem
 
-	   // Iterate over the line_items and save the product_id and quantity
+	// Iterate over the line_items and save the product_id and quantity
 
-	   	for _, lineItem := range payload.LineItems {
-	   		item := MeliItem{
-	   			ProductID: convertToString(lineItem.ProductID),
-	   			Quantity:  lineItem.Quantity,
-	   		}
-	   		items = append(items, item)
-	   	}
+	for _, orderItem := range response.OrderItems {
+		item := MeliItem{
+			MeliID:   convertToString(orderItem.Item.ID),
+			Quantity: orderItem.Quantity,
+		}
+		items = append(items, item)
+	}
 
-	   	if len(items) == 0 {
-	   		log.Println("no items received in notification")
-	   	}
+	if len(items) == 0 {
+		log.Println("no items received in notification")
+	}
 
-	   // Process the webhook request or perform any desired actions using the items slice
+	for _, item := range items {
+		log.Printf("meli_id: MLA%s", item.MeliID)
+		log.Println("quantity:", item.Quantity)
 
-	   // Print the items
+		product_id, err := productIDFromMeli(item.MeliID)
+		if err != nil {
+			log.Println("error finding product in database or connecting to it:", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 
-	   	for _, item := range items {
-	   		log.Println("product_id:", item.ProductID)
-	   		log.Println("quantity:", item.Quantity)
+		_, err = postMovement(product_id, item.Quantity, "Mercado Libre")
+		if err != nil {
+			log.Println("error posting movement:", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 
-	   		product_id, err := productIDFromWC(item.ProductID)
-	   		if err != nil {
-	   			log.Println("error finding product in database or connecting to it:", err)
-	   			w.WriteHeader(http.StatusInternalServerError)
-	   			return
-	   		}
+	}
 
-	   		_, err = postMovement(product_id, item.Quantity, "Woocommerce")
-	   		if err != nil {
-	   			log.Println("error posting movement:", err)
-	   			w.WriteHeader(http.StatusInternalServerError)
-	   			return
-	   		}
+	// Print the raw request body
+	//log.Println(string(body))
 
-	   }
+	// Respond with a success status
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("webhook processed successfully"))
+	log.Println("woocommerce notification processed")
 
-	   // Print the raw request body
-	   //log.Println(string(body))
-
-	   // Respond with a success status
-	   w.WriteHeader(http.StatusOK)
-	   w.Write([]byte("webhook processed successfully"))
-	   log.Println("woocommerce notification processed")
-	*/
 }
