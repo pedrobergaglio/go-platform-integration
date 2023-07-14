@@ -150,6 +150,8 @@ func handleASPriceWebhook(w http.ResponseWriter, r *http.Request) {
 			log.Println("error updating meli price:", error)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
+		} else {
+			log.Println("entro meli")
 		}
 	} else {
 		log.Println("product not linked to meli")
@@ -162,6 +164,8 @@ func handleASPriceWebhook(w http.ResponseWriter, r *http.Request) {
 			log.Println("Error updating Woocommerce price:", error)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
+		} else {
+			log.Println("entro wc")
 		}
 	} else {
 		log.Println("product not linked to wc")
@@ -406,7 +410,7 @@ func updateWC(wc_id string, field string, value interface{}) string {
 
 	req, err := http.NewRequest(http.MethodPut, wcURL, bytes.NewBufferString(wcPayload))
 	if err != nil {
-		return fmt.Sprintf("Error creating request for WooCommerce:", err)
+		return "Error creating request for WooCommerce:" + fmt.Sprint(err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -415,12 +419,12 @@ func updateWC(wc_id string, field string, value interface{}) string {
 	client := http.DefaultClient
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Sprintf("Error updating product in WooCommerce:", err)
+		return "Error updating product in WooCommerce:" + fmt.Sprint(err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Sprintf("Unexpected status code from WooCommerce:", resp.StatusCode)
+		return "Unexpected status code from WooCommerce:" + fmt.Sprint(resp.StatusCode)
 	}
 
 	return ""
@@ -435,7 +439,7 @@ func updateMeli(meli_id string, field string, value interface{}) string {
 
 	req, err := http.NewRequest(http.MethodPut, URL, bytes.NewBufferString(payload))
 	if err != nil {
-		return fmt.Sprint("Error creating request for MELI:", err)
+		return "Error creating request for MELI:" + fmt.Sprint(err)
 	}
 
 	auth := "Bearer " + os.Getenv("MELI_ACCESS_TOKEN")
@@ -447,12 +451,12 @@ func updateMeli(meli_id string, field string, value interface{}) string {
 	client := http.DefaultClient
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Sprint("Error updating product in MELI:", err)
+		return "Error updating product in MELI:" + fmt.Sprint(err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Sprint("Unexpected status code from MELI:", resp.StatusCode)
+		return "Unexpected status code from MELI:" + fmt.Sprint(resp.StatusCode)
 	}
 
 	return ""
