@@ -101,6 +101,8 @@ func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 	if error != "" {
 		log.Println("Error updating stock in MELI:", fmt.Sprintf(error))
 		return
+	} else {
+		log.Println("entro meli")
 	}
 
 	// Update the WooCommerce product
@@ -108,6 +110,8 @@ func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 	if error != "" {
 		log.Println("Error updating stock in WC:", fmt.Sprintf(error))
 		return
+	} else {
+		log.Println("entro wc")
 	}
 
 	// Write a success response if everything is processed successfully
