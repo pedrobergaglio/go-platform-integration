@@ -148,6 +148,6 @@ func handleMeliWebhook(w http.ResponseWriter, r *http.Request) {
 	// Respond with a success status
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("webhook processed successfully"))
-	log.Println("woocommerce notification processed")
+	log.Println("meli notification processed")
 
 }
