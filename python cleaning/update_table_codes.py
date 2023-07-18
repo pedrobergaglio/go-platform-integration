@@ -1,7 +1,6 @@
 import pandas as pd
 import mysql.connector
 import random
-from tqdm import tqdm
 
 # MySQL database configuration
 config = {
@@ -18,7 +17,7 @@ cursor = cnx.cursor()
 
 
 # Query to retrieve data from the table
-table_name = 'PRODUCTS'
+table_name = 'PRODUCTOS'
 query = f"SELECT * FROM {table_name}"
 
 # Execute the query
@@ -32,77 +31,90 @@ column_names = [i[0] for i in cursor.description]
 df_productos = pd.DataFrame(data, columns=column_names)
 
 # Query to retrieve data from the table
-table_nameT = 'STOCK'
-queryT = f"SELECT * FROM {table_nameT}"
+table_namem = 'BRANDS'
+querym = f"SELECT * FROM {table_namem}"
 
 # Execute the query
-cursor.execute(queryT)
+cursor.execute(querym)
 
 # Fetch all rows and column names
-dataT = cursor.fetchall()
-column_namesT = [i[0] for i in cursor.description]
+data_marcas = cursor.fetchall()
+column_names_marcas = [i[0] for i in cursor.description]
 
 # Create a Pandas DataFrame from the fetched data
-df_STOCK = pd.DataFrame(dataT, columns=column_namesT)
+df_marcas = pd.DataFrame(data_marcas, columns=column_names_marcas)
 
-delete_query = "DELETE FROM MOVEMENTS WHERE product = %s AND datetime = %s"
+# Query to retrieve data from the table
+table_names = 'STOCK'
+querys = f"SELECT * FROM {table_names}"
+
+# Execute the query
+cursor.execute(querys)
+
+# Fetch all rows and column names
+datastock = cursor.fetchall()
+column_names_stock = [i[0] for i in cursor.description]
+
+# Create a Pandas DataFrame from the fetched data
+df_stock = pd.DataFrame(datastock, columns=column_names_stock)
+
+# Query to retrieve data from the table
+table_names = 'MOVIMIENTOS'
+querys = f"SELECT * FROM {table_names}"
+
+# Execute the query
+cursor.execute(querys)
+
+# Fetch all rows and column names
+datastock = cursor.fetchall()
+column_names_stock = [i[0] for i in cursor.description]
+
+# Create a Pandas DataFrame from the fetched data
+df_movimientos = pd.DataFrame(datastock, columns=column_names_stock)
+
+# Query to retrieve data from the table
+table_names = 'MOVEMENTS'
+querys = f"SELECT * FROM {table_names}"
+
+# Execute the query
+cursor.execute(querys)
+
+# Fetch all rows and column names
+datastock = cursor.fetchall()
+column_names_stock = [i[0] for i in cursor.description]
+
+# Create a Pandas DataFrame from the fetched data
+df_movements = pd.DataFrame(datastock, columns=column_names_stock)
+
+print("Started to search")
+
+flag = 0
 
 # Process the data using a loop
-for index, row in tqdm(enumerate(df_STOCK.iterrows())):
+#for index, row in df_productos.iterrows():
 
-    if index < 1222:
-        continue
-
-    flag = 0
     # Perform your processing logic here
     # Modify the values in the row as needed
-    for indx, rw in df_productos.iterrows():
-        if df_productos.at[indx, 'product'] == df_STOCK.at[index, 'product']:  
+for indx, rw in df_movimientos.iterrows():
+
+    # Generate the update query with a parameter
+    update_query = "UPDATE MOVEMENTS SET product_id = %s WHERE product = %s"
+
+    for index, row in df_movements.iterrows():
+        if df_movements.at[index, 'product'] == df_movimientos.at[indx, 'product']:
             flag = 1
+
+            # Execute the update query with the parameter values
+            cursor.execute(update_query, (str(df_movimientos.at[index, 'product_id']), df_movements.at[index, 'product']))
             
-            # Generate the update query
-            update_query = f"UPDATE STOCK SET product_id = '{df_productos.at[indx, 'product_id']}' WHERE product = '{df_STOCK.at[index, 'product']}'"
-            # Execute the update query
-            cursor.execute(update_query)
-            print("Done")
-            
+            print(f"{df_movements.at[index, 'product']} updated : {indx}")
+
+
+    if flag == 0 :
+        print(f"product not found: {df_movements.at[index, 'product']}")
     
-    if flag == 0:
-        print(f"Remove item: {df_STOCK.at[index, 'product']}")
-         # Generate the update query
-        
-        values = (df_STOCK.at[index, 'product'], str(df_STOCK.at[index, 'datetime']))
-        cursor.execute(delete_query, values)
-        # Execute the update query
-        
-        
-
-    # Example: Multiply the 'quantity' column by 2
-    #df.at[index, 'quantity'] = row['quantity'] * 2
-
-print("Updated codes")
-
-"""
-# Update the table in the MySQL database
-for index, row in df_movs.iterrows():
-    # Extract the values from the row
-    values = tuple(row[column] for column in column_namesT)
-    
-    # Generate the update query
-    update_query = f"UPDATE {table_nameT} SET "
-    update_query += ', '.join([f"`{column}` = %s" for column in column_namesT])
-    update_query += f" WHERE {column_namesT[3]} = %s"  # Assuming the first column is the primary key
-    
-    # Append the primary key value to the tuple of values
-    values += (row[column_namesT[3]],)
-    
-    # Execute the update query
-    cursor.execute(update_query, values)
-
-    print(str(codigo) + " : " + df_movs.at[index, 'PRODUCTO'])
-
 # Commit the changes and close the connection
+
 cnx.commit()
 cursor.close()
 cnx.close()
-"""

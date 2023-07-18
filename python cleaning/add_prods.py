@@ -31,18 +31,18 @@ column_names = [i[0] for i in cursor.description]
 df_productos = pd.DataFrame(data, columns=column_names)
 
 # Query to retrieve data from the table
-table_namem = 'MARCAS'
+table_namem = 'BRANDS'
 querym = f"SELECT * FROM {table_namem}"
 
 # Execute the query
 cursor.execute(querym)
 
 # Fetch all rows and column names
-datam = cursor.fetchall()
-column_namesm = [i[0] for i in cursor.description]
+data_marcas = cursor.fetchall()
+column_names_marcas = [i[0] for i in cursor.description]
 
 # Create a Pandas DataFrame from the fetched data
-df_marcas = pd.DataFrame(datam, columns=column_namesm)
+df_marcas = pd.DataFrame(data_marcas, columns=column_names_marcas)
 
 # Query to retrieve data from the table
 table_names = 'STOCK'
@@ -52,32 +52,73 @@ querys = f"SELECT * FROM {table_names}"
 cursor.execute(querys)
 
 # Fetch all rows and column names
-datas = cursor.fetchall()
-column_namess = [i[0] for i in cursor.description]
+datastock = cursor.fetchall()
+column_names_stock = [i[0] for i in cursor.description]
 
 # Create a Pandas DataFrame from the fetched data
-df_stock = pd.DataFrame(datas, columns=column_namess)
+df_stock = pd.DataFrame(datastock, columns=column_names_stock)
+
+# Query to retrieve data from the table
+table_names = 'PLATAFORMAS'
+querys = f"SELECT * FROM {table_names}"
+
+# Execute the query
+cursor.execute(querys)
+
+# Fetch all rows and column names
+datastock = cursor.fetchall()
+column_names_stock = [i[0] for i in cursor.description]
+
+# Create a Pandas DataFrame from the fetched data
+df_plataformas = pd.DataFrame(datastock, columns=column_names_stock)
+
+# Query to retrieve data from the table
+table_names = 'PLATFORMS'
+querys = f"SELECT * FROM {table_names}"
+
+# Execute the query
+cursor.execute(querys)
+
+# Fetch all rows and column names
+datastock = cursor.fetchall()
+column_names_stock = [i[0] for i in cursor.description]
+
+# Create a Pandas DataFrame from the fetched data
+df_platforms = pd.DataFrame(datastock, columns=column_names_stock)
 
 print("Started to search")
 
-# Process the data using a loop
-for index, row in df_stock.iterrows():
+flag = 0
 
-    flag = 0 
+# Process the data using a loop
+#for index, row in df_productos.iterrows():
+
     # Perform your processing logic here
     # Modify the values in the row as needed
-    for indx, rw in df_productos.iterrows():
+for indx, rw in df_plataformas.iterrows():
 
-        if df_productos.at[indx, 'PRODUCTO'] == df_stock.at[index, 'PRODUCTO']:  
-            
+    # Generate the update query with a parameter
+    update_query = "UPDATE PLATFORMS SET meli_id = %s, wc_id = %s, alephee_id = %s WHERE product = %s"
+
+    for index, row in df_platforms.iterrows():
+        if df_platforms.at[index, 'product'] == df_plataformas.at[indx, 'product']:
             flag = 1
-            print("Found")
 
+            # Execute the update query with the parameter values
+            cursor.execute(update_query, (str(df_plataformas.at[index, 'meli_id']), str(df_plataformas.at[index, 'wc_id']), str(df_plataformas.at[index, 'alephee_id']), df_platforms.at[index, 'product']))
+            
+            print(f"{df_platforms.at[index, 'product']} updated : {indx}")
+
+
+    if flag == 0 :
+        print(f"product not found: {df_platforms.at[index, 'product']}")
+    
+"""
     # Si no encontró el producto
     if flag == 0:
         # Insert the item in the productos table
-        insert_query = f"INSERT INTO PRODUCTOS ({', '.join(column_namess)}) VALUES ({', '.join(['%s']*len(column_namess))})"
-        values = tuple(row[column] for column in column_namess)
+        insert_query = f"INSERT INTO PRODUCTOS ({', '.join(column_names_stock)}) VALUES ({', '.join(['%s']*len(column_names_stock))})"
+        values = tuple(row[column] for column in column_names_stock)
         cursor.execute(insert_query, values)
 
         print(f"Product added to PRODUCTOS: {df_stock.at[index, 'PRODUCTO']}")
@@ -136,8 +177,9 @@ for index, row in df_stock.iterrows():
 
                         print(f"Product updated: {df_stock.at[index, 'PRODUCTO']}")
         break
-
+"""
 # Commit the changes and close the connection
+
 cnx.commit()
 cursor.close()
 cnx.close()
