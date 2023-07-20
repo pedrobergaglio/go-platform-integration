@@ -34,8 +34,6 @@ type MeliItem struct {
 
 func handleMeliWebhook(w http.ResponseWriter, r *http.Request) {
 
-	log.Println("received meli order notification")
-
 	// Ensure that the request method is POST
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -50,8 +48,6 @@ func handleMeliWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Print(string(body))
-
 	var notification Notification
 	err = json.Unmarshal(body, &notification)
 	if err != nil {
@@ -62,9 +58,11 @@ func handleMeliWebhook(w http.ResponseWriter, r *http.Request) {
 	//Get order info
 
 	if notification.OrderIDLink == os.Getenv("last_order_id_link") {
-		log.Println("same notification received")
+		log.Println("notification received twice")
 		return
 	}
+
+	log.Printf("received meli order notification: %s", notification.OrderIDLink)
 
 	err = os.Setenv("last_order_id_link", notification.OrderIDLink)
 	if err != nil {
@@ -88,13 +86,13 @@ func handleMeliWebhook(w http.ResponseWriter, r *http.Request) {
 	client := http.DefaultClient
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Println("error getting order info:", err)
+		log.Println("error getting order data:", err)
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		log.Println("unexpected status code from meli:" + fmt.Sprint(resp.StatusCode))
+		log.Println("unexpected status code from meli while getting order data:" + fmt.Sprint(resp.StatusCode))
 		return
 	}
 
@@ -105,14 +103,15 @@ func handleMeliWebhook(w http.ResponseWriter, r *http.Request) {
 	// Read the request body
 	body, err = io.ReadAll(resp.Body)
 	if err != nil {
-		log.Println("error reading request body:", err)
+		log.Println("error reading order request body:", err)
 		return
 	}
 
 	var response orderData
 	err = json.Unmarshal(body, &response)
 	if err != nil {
-		log.Println("error unmarshaling request body:", err)
+		log.Println("error unmarshaling order request body:", err)
+		return
 	}
 
 	// Create a slice to store the items
@@ -130,21 +129,23 @@ func handleMeliWebhook(w http.ResponseWriter, r *http.Request) {
 
 	if len(items) == 0 {
 		log.Println("no items received in notification")
+		return
 	}
 
 	for _, item := range items {
 
+		//trim the 'MLA' part
 		item.MeliID = strings.TrimPrefix(item.MeliID, "MLA")
-
-		log.Printf("meli_id: MLA%s", item.MeliID)
-		log.Println("quantity:", item.Quantity)
 
 		product_id, err := productIDFromMeli(item.MeliID)
 		if err != nil {
-			log.Println("error finding product in database:", err)
+			log.Println("error finding meli code in database:", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+
+		log.Printf("product_id: %s", product_id)
+		log.Println("quantity:", item.Quantity)
 
 		_, err = postMovement(product_id, item.Quantity, "Mercado Libre")
 		if err != nil {
@@ -152,8 +153,6 @@ func handleMeliWebhook(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-
-		log.Println("meli notification processed")
 
 	}
 
