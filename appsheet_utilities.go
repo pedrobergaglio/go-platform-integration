@@ -111,7 +111,15 @@ func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 
 	//Compute and format stock with margin substracted
 	totalint, err := strconv.Atoi(total)
+	if err != nil {
+		log.Println("error passing string to int", err)
+		return
+	}
 	marginint, err := strconv.Atoi(stock_margin)
+	if err != nil {
+		log.Println("error passing string to int", err)
+		return
+	}
 	stock_minus_marginint := totalint - marginint
 
 	stock_minus_margin := convertToString(stock_minus_marginint)
@@ -186,11 +194,13 @@ func handleASPriceWebhook(w http.ResponseWriter, r *http.Request) {
 
 	// Update the MELI product
 	/*
+		flag := 0
+
 		if meli_id != "0" {
 			error = updateMeli(meli_id, "price", payload.SalePrice)
 			if error != "" {
 				log.Println("error updating meli price:", error)
-				w.WriteHeader(http.StatusInternalServerError)
+				flag = 1
 			} else {
 				log.Println("entro meli")
 			}
@@ -203,7 +213,7 @@ func handleASPriceWebhook(w http.ResponseWriter, r *http.Request) {
 			error = updateWC(wc_id, "regular_price", `"`+payload.SalePrice+`"`)
 			if error != "" {
 				log.Println("error updating Woocommerce price:", error)
-				w.WriteHeader(http.StatusInternalServerError)
+				flag = 1
 			} else {
 				log.Println("entro wc")
 			}
@@ -212,7 +222,7 @@ func handleASPriceWebhook(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Write a success response if everything is processed successfully
-		if error == "" {
+		if flag == 0 {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte("webhook processed successfully"))
 			log.Println("price updated")
