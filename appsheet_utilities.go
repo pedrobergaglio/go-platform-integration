@@ -142,6 +142,19 @@ func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 		log.Println("product not linked to meli")
 	}
 
+	// Update the ALEPHEE product
+	/*if alephee_id != "0" {
+		error = updateAlephee(alephee_id, "available_quantity", stock_margin)
+		if error != "" {
+			log.Println("error updating stock in alephee:", error)
+			return
+		} else {
+			log.Println("entro alephee")
+		}
+	} else {
+		log.Println("product not linked to mealepheeli")
+	}
+
 	// Update the WooCommerce product
 	if wc_id != "0" {
 		error = updateWC(wc_id, "stock_quantity", stock_margin)
@@ -243,6 +256,7 @@ func productIDFromWC(wc_id string) (string, error) {
 			"Action": "Find",
 			"Properties": {
 				"Locale": "es-US",
+				"Selector": "Filter(PLATFORMS, ISNOTBANK([wc_id]))"
 				"Timezone": "Argentina Standard Time",
 			},
 			"Rows": []
@@ -524,6 +538,7 @@ func productIDFromMeli(meli_id string) (string, error) {
 			"Action": "Find",
 			"Properties": {
 				"Locale": "es-US",
+				"Selector": "Filter(PLATFORMS, ISNOTBANK([meli_id]))"
 				"Timezone": "Argentina Standard Time",
 			},
 			"Rows": []

@@ -25,30 +25,15 @@ VENDEDOR
 */
 
 /*
-curl -X PUT -H 'Authorization: Bearer $ACCESS_TOKEN' -H "Content-Type: application/json" -H "Accept: application/json" -d
-{
-  "available_quantity": 1
-}
-https://api.mercadolibre.com/items/$ITEM_ID
-*/
+https://api.alephcrm.com/v2/products?API_KEY=8F509A97-B5C8-4B9E-8148-07C055C54C05&accountId=3319
 
-/*
-curl -X POST -H 'Authorization: Bearer $ACCESS_TOKEN' -H "Content-Type: application/json" -H "Accept: application/json" -d
-{
-  "id": "gold"
-}
-https://api.mercadolibre.com/items/$ITEM_ID/listing_type
-*/
-
-/*
-{
-  "access_token": "APP_USR-3917704976553080-071313-550a4cafab3ddf64b95902946e6078b4-1423001750",
-  "token_type": "Bearer",
-  "expires_in": 21600,
-  "scope": "offline_access read write",
-  "user_id": 1423001750,
-  "refresh_token": "TG-64b0375fea147c0001850ea2-1423001750"
-}
+[
+    {
+      "sku": "1025700",
+      "stock": {
+        "quantity": 2}
+    }
+  ]
 */
 
 import (
@@ -129,6 +114,8 @@ func main() {
 	// Start the server and specify the host and port
 	log.Println("server listening on", port)
 	log.Fatal(http.ListenAndServe("0.0.0.0"+port, nil))
+
+	updateRumboPricesAlephee()
 }
 
 /*
