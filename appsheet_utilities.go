@@ -108,7 +108,7 @@ func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println("meli_id:", meli_id, "wc_id", wc_id)
+	log.Println("meli_id:", meli_id, "wc_id", wc_id, "alephee_id", alephee_id)
 
 	//Compute and format stock with margin substracted
 	totalint, err := strconv.Atoi(total)
@@ -137,7 +137,7 @@ func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 	flag := 0
 	/*
 		// Update the MELI product
-		if meli_id != "0" {
+		if meli_id != "0" && alephee_id == "0" {
 			error = updateMeli(meli_id, "available_quantity", stock_margin)
 			if error != "" {
 				log.Println("error updating stock in meli:", error)

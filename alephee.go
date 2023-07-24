@@ -229,7 +229,6 @@ https://api.alephcrm.com/v2/products?API_KEY=8F509A97-B5C8-4B9E-8148-07C055C54C0
 func updateAlephee(alephee_id string, stock interface{}) string {
 
 	URL := fmt.Sprintf("https://api.alephcrm.com/v2/products?API_KEY=%s&accountId=%s", os.Getenv("alephee_api_key"), os.Getenv("alephee_account_id"))
-	log.Println(os.Getenv("alephee_api_key"), os.Getenv("alephee_account_id"))
 	payload := fmt.Sprintf(`
 	[
 		{
@@ -239,8 +238,6 @@ func updateAlephee(alephee_id string, stock interface{}) string {
 			}
 		}
 	  ]`, fmt.Sprint(alephee_id), fmt.Sprint(convertToString(stock)))
-
-	log.Print(payload)
 
 	req, err := http.NewRequest(http.MethodPost, URL, bytes.NewBufferString(payload))
 	if err != nil {
