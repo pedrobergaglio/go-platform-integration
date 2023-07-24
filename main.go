@@ -24,18 +24,6 @@ VENDEDOR
 }
 */
 
-/*
-https://api.alephcrm.com/v2/products?API_KEY=8F509A97-B5C8-4B9E-8148-07C055C54C05&accountId=3319
-
-[
-    {
-      "sku": "1025700",
-      "stock": {
-        "quantity": 2}
-    }
-  ]
-*/
-
 import (
 	"fmt"
 	"log"
@@ -118,20 +106,3 @@ func main() {
 	log.Fatal(http.ListenAndServe("0.0.0.0"+port, nil))
 
 }
-
-/*
-func getItems() {
-
-	accessToken := os.Getenv("meli_access_token")
-
-	// Define the request URL and payload
-	url := "https://api.mercadolibre.com/items/MLA1449065018"
-	payload := fmt.Sprintf(`{
-		"grant_type": "refresh_token",
-		"client_id": "3917704976553080",
-		"client_secret": "6VuqfhmGawIqjEmp7pzgFhyTSChQjhl4",
-		"refresh_token": "%s"
-	}`, accessToken)
-
-}
-*/
