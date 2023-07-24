@@ -39,8 +39,11 @@ type ASMovementWebhookPayload struct {
 }
 
 type ASPriceWebhookPayload struct {
-	ProductID interface{} `json:"product_id"`
-	SalePrice string      `json:"sale_price"`
+	ProductID       interface{} `json:"product_id"`
+	SalePrice       string      `json:"sale_price"`
+	WCID            interface{} `json:"wc_id"`
+	MeliID          interface{} `json:"meli_id"`
+	MeliPriceMargin int         `json:"meli_price_margin"`
 }
 
 type stockData struct {
@@ -204,54 +207,59 @@ func handleASPriceWebhook(w http.ResponseWriter, r *http.Request) {
 	// Log the received payload
 	log.Println("updated price product from app:", payload.ProductID)
 
-	//Get platforms data
-	_, _, meli_id, wc_id, error := getPlatformsID(convertToString(payload.ProductID))
-	if error != "" {
-		log.Println("error getting platforms id:", error)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	error = ""
-
-	log.Println("meli_id:", meli_id, "wc_id:", wc_id, "price:", payload.SalePrice)
+	log.Println("meli_id:", payload.MeliID, "wc_id:", payload.WCID, "price:", payload.SalePrice)
 
 	// Update the MELI product
-	/*
-		flag := 0
 
-		if meli_id != "0" {
-			error = updateMeli(meli_id, "price", payload.SalePrice)
-			if error != "" {
-				log.Println("error updating meli price:", error)
-				flag = 1
-			} else {
-				log.Println("entro meli")
-			}
+	flag := 0
+
+	if convertToString(payload.MeliID) != "0" {
+
+		sale_price, err := strconv.ParseFloat(payload.SalePrice, 32)
+		if err != nil {
+			log.Println("error parsing sale price to float")
+			return
+		}
+
+		margin, err := strconv.ParseFloat(convertToString(payload.MeliPriceMargin), 32)
+		if err != nil {
+			log.Println("error parsing margin to float")
+			return
+		}
+
+		meli_price := sale_price * (1 + margin/100)
+
+		errr := updateMeli(convertToString(payload.MeliID), "price", meli_price)
+		if errr != "" {
+			log.Println("error updating meli price:", errr)
+			flag = 1
 		} else {
-			log.Println("product not linked to meli")
+			log.Println("entro meli")
 		}
+	} else {
+		log.Println("product not linked to meli")
+	}
 
-		// Update the WooCommerce product
-		if wc_id != "0" {
-			error = updateWC(wc_id, "regular_price", `"`+payload.SalePrice+`"`)
-			if error != "" {
-				log.Println("error updating Woocommerce price:", error)
-				flag = 1
-			} else {
-				log.Println("entro wc")
-			}
+	// Update the WooCommerce product
+	if convertToString(payload.WCID) != "0" {
+		errr := updateWC(convertToString(payload.WCID), "regular_price", `"`+payload.SalePrice+`"`)
+		if errr != "" {
+			log.Println("error updating Woocommerce price:", errr)
+			flag = 1
 		} else {
-			log.Println("product not linked to wc")
+			log.Println("entro wc")
 		}
+	} else {
+		log.Println("product not linked to wc")
+	}
 
-		// Write a success response if everything is processed successfully
-		if flag == 0 {
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("webhook processed successfully"))
-			log.Println("price updated")
-		}
-	*/
+	// Write a success response if everything is processed successfully
+	if flag == 0 {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("webhook processed successfully"))
+		log.Println("price updated")
+	}
+
 }
 
 func productIDFromWC(wc_id string) (string, error) {
