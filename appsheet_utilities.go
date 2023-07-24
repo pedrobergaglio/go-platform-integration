@@ -123,6 +123,10 @@ func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 	stock_minus_marginint := totalint - marginint
 
+	if stock_minus_marginint < 0 {
+		stock_minus_marginint = 0
+	}
+
 	stock_minus_margin := convertToString(stock_minus_marginint)
 
 	log.Println("total_stock:", total, "margin:", stock_margin, "stock_updated:", stock_minus_margin)
@@ -130,30 +134,32 @@ func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 	// Print the values
 	//log.Println("Woocommerce ID:", woo_id)
 
-	// Update the MELI product
-	/*if meli_id != "0" {
-		error = updateMeli(meli_id, "available_quantity", stock_margin)
-		if error != "" {
-			log.Println("error updating stock in meli:", error)
-			return
+	flag := 0
+	/*
+		// Update the MELI product
+		if meli_id != "0" {
+			error = updateMeli(meli_id, "available_quantity", stock_margin)
+			if error != "" {
+				log.Println("error updating stock in meli:", error)
+				flag = 1
+			} else {
+				log.Println("entro meli")
+			}
 		} else {
-			log.Println("entro meli")
+			log.Println("product not linked to meli")
 		}
-	} else {
-		log.Println("product not linked to meli")
-	}
 	*/
 	// Update the ALEPHEE product
 	if alephee_id != "0" {
 		error = updateAlephee(alephee_id, stock_margin)
 		if error != "" {
 			log.Println("error updating stock in alephee:", error)
-			return
+			flag = 1
 		} else {
 			log.Println("entro alephee")
 		}
 	} else {
-		log.Println("product not linked to mealepheeli")
+		log.Println("product not linked to alephee")
 	}
 
 	// Update the WooCommerce product
@@ -161,12 +167,16 @@ func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 		error = updateWC(wc_id, "stock_quantity", stock_margin)
 		if error != "" {
 			log.Println("error updating stock in WC:", error)
-			return
+			flag = 1
 		} else {
 			log.Println("entro wc")
 		}
 	} else {
 		log.Println("product not linked to wc")
+	}
+
+	if flag == 1 {
+		return
 	}
 
 	// Write a success response if everything is processed successfully

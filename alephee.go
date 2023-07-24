@@ -117,6 +117,13 @@ func updateRumboPricesAlephee() {
 		}
 		defer resp.Body.Close()
 
+		if resp.StatusCode == 429 {
+			fmt.Println("error too many requests. waiting for 1 minute and 5 seconds...")
+			time.Sleep(1*time.Minute + 5*time.Second) // Wait for 1 minute and 5 seconds
+			updateRumboPricesAlephee()
+			return
+		}
+
 		if resp.StatusCode != http.StatusOK {
 			log.Println("unexpected status code from meli while getting order data:" + fmt.Sprint(resp.StatusCode))
 			return
@@ -222,12 +229,14 @@ https://api.alephcrm.com/v2/products?API_KEY=8F509A97-B5C8-4B9E-8148-07C055C54C0
 func updateAlephee(alephee_id string, stock interface{}) string {
 
 	URL := fmt.Sprintf("https://api.alephcrm.com/v2/products?API_KEY=%s&accountId=%s", os.Getenv("alephee_api_key"), os.Getenv("alephee_app_id"))
+	log.Println(os.Getenv("alephee_api_key"), os.Getenv("alephee_app_id"))
 	payload := fmt.Sprintf(`
 	[
 		{
 		  "sku": "%s",
 		  "stock": {
-			"quantity": %s}
+			"quantity": %s
+			}
 		}
 	  ]`, fmt.Sprint(alephee_id), fmt.Sprint(convertToString(stock)))
 
@@ -252,7 +261,7 @@ func updateAlephee(alephee_id string, stock interface{}) string {
 	}
 
 	if resp.StatusCode == 429 {
-		fmt.Println("Too Many Requests. Waiting for 1 minute and 5 seconds...")
+		fmt.Println("error too many requests. waiting for 1 minute and 5 seconds...")
 		time.Sleep(1*time.Minute + 5*time.Second) // Wait for 1 minute and 5 seconds
 		return updateAlephee(alephee_id, stock)
 	}
