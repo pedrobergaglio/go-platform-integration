@@ -74,7 +74,7 @@ func updateRumboPricesAlephee() {
 
 	// Check the response status code
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("unexpected status code: %d", resp.StatusCode)
+		log.Printf("unexpected status code from appsheet: %d", resp.StatusCode)
 		return
 	}
 
@@ -125,7 +125,7 @@ func updateRumboPricesAlephee() {
 		}
 
 		if resp.StatusCode != http.StatusOK {
-			log.Println("unexpected status code from meli while getting order data:" + fmt.Sprint(resp.StatusCode))
+			log.Println("unexpected status code from alephee while getting product price: " + fmt.Sprint(resp.StatusCode))
 			return
 		}
 
