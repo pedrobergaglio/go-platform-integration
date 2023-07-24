@@ -217,13 +217,13 @@ func handleASPriceWebhook(w http.ResponseWriter, r *http.Request) {
 
 		sale_price, err := strconv.ParseFloat(payload.SalePrice, 32)
 		if err != nil {
-			log.Println("error parsing sale price to float")
+			log.Printf("error parsing sale price to float: %v", err)
 			return
 		}
 
 		margin, err := strconv.ParseFloat(convertToString(payload.MeliPriceMargin), 32)
 		if err != nil {
-			log.Println("error parsing margin to float")
+			log.Printf("error parsing margin to float: %v", err)
 			return
 		}
 
