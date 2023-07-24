@@ -229,7 +229,7 @@ func handleASPriceWebhook(w http.ResponseWriter, r *http.Request) {
 
 		meli_price := sale_price * (1 + margin/100)
 
-		errr := updateMeli(convertToString(payload.MeliID), "price", meli_price)
+		errr := updateMeli(convertToString(payload.MeliID), "price", convertToString(meli_price))
 		if errr != "" {
 			log.Println("error updating meli price:", errr)
 			flag = 1
