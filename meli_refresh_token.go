@@ -81,10 +81,11 @@ func refreshToken() error {
 	return nil
 }
 
-func refreshTokenPeriodically() {
+func refreshPeriodically() {
 	refreshInterval := time.Hour * 5 // Refresh the token every hour (adjust as needed)
 
 	for {
+		updateRumboPricesAlephee()
 		err := refreshToken()
 		if err != nil {
 			log.Println("retrying. there was an error refreshing the meli token:", err)

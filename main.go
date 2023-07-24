@@ -91,7 +91,7 @@ func main() {
 	os.Setenv("meli_refresh_token", "TG-64b08f898b72c50001cbe90e-1423001750")
 
 	// Start a background goroutine to periodically check token expiration and refresh if needed
-	go refreshTokenPeriodically()
+	go refreshPeriodically()
 
 	// Register the webhook handler functions with the default server mux
 	http.HandleFunc("/movement", handleASMovementWebhook)
@@ -115,7 +115,6 @@ func main() {
 	log.Println("server listening on", port)
 	log.Fatal(http.ListenAndServe("0.0.0.0"+port, nil))
 
-	updateRumboPricesAlephee()
 }
 
 /*
