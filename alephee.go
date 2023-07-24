@@ -247,6 +247,8 @@ func updateAlephee(alephee_id string, stock interface{}) string {
 		return "error creating request for alephee:" + fmt.Sprint(err)
 	}
 
+	req.Header.Set("Content-Type", "application/json")
+
 	client := http.DefaultClient
 	resp, err := client.Do(req)
 	if err != nil {
