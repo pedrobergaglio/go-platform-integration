@@ -88,7 +88,7 @@ func main() {
 
 	loadConfig()
 
-	os.Setenv("meli_refresh_token", "TG-64b08f898b72c50001cbe90e-1423001750")
+	//os.Setenv("meli_refresh_token", "TG-64b08f898b72c50001cbe90e-1423001750")
 
 	// Start a background goroutine to periodically check token expiration and refresh if needed
 	go refreshPeriodically()

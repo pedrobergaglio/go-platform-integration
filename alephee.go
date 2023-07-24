@@ -240,7 +240,7 @@ func updateAlephee(alephee_id string, stock interface{}) string {
 		}
 	  ]`, fmt.Sprint(alephee_id), fmt.Sprint(convertToString(stock)))
 
-	req, err := http.NewRequest(http.MethodPut, URL, bytes.NewBufferString(payload))
+	req, err := http.NewRequest(http.MethodPost, URL, bytes.NewBufferString(payload))
 	if err != nil {
 		return "error creating request for alephee:" + fmt.Sprint(err)
 	}
