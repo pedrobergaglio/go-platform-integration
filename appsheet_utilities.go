@@ -52,6 +52,7 @@ type PlatformsData struct {
 	Product     string `json:"product_id"`
 	WCID        string `json:"wc_id"`
 	MeliID      string `json:"meli_id"`
+	AlepheeID   string `json:"alephee_id"`
 	StockMargin string `json:"stock_margin"`
 }
 
@@ -100,7 +101,7 @@ func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 	log.Println("oran stock:", total)
 
 	//Get platforms ids
-	stock_margin, meli_id, wc_id, error := getPlatformsID(convertToString(payload.ProductID))
+	stock_margin, alephee_id, meli_id, wc_id, error := getPlatformsID(convertToString(payload.ProductID))
 	if error != "" {
 		log.Println(error)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -141,10 +142,10 @@ func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 	} else {
 		log.Println("product not linked to meli")
 	}
-
+	*/
 	// Update the ALEPHEE product
-	/*if alephee_id != "0" {
-		error = updateAlephee(alephee_id, "available_quantity", stock_margin)
+	if alephee_id != "0" {
+		error = updateAlephee(alephee_id, stock_margin)
 		if error != "" {
 			log.Println("error updating stock in alephee:", error)
 			return
@@ -172,7 +173,7 @@ func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("webhook processed successfully"))
 	log.Println("movement processed")
-	*/
+
 }
 
 func handleASPriceWebhook(w http.ResponseWriter, r *http.Request) {
@@ -194,7 +195,7 @@ func handleASPriceWebhook(w http.ResponseWriter, r *http.Request) {
 	log.Println("updated price product from app:", payload.ProductID)
 
 	//Get platforms data
-	_, meli_id, wc_id, error := getPlatformsID(convertToString(payload.ProductID))
+	_, _, meli_id, wc_id, error := getPlatformsID(convertToString(payload.ProductID))
 	if error != "" {
 		log.Println("error getting platforms id:", error)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -414,7 +415,7 @@ func getProductTotalStock(product_id string) (string, error) {
 
 }
 
-func getPlatformsID(product_id string) (string, string, string, string) {
+func getPlatformsID(product_id string) (string, string, string, string, string) {
 
 	stockgetURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/PLATFORMS/Action", os.Getenv("appsheet_id"))
 	find_in_stock := `{
@@ -423,7 +424,7 @@ func getPlatformsID(product_id string) (string, string, string, string) {
 		"Rows": []}`
 	get, err := http.NewRequest(http.MethodPost, stockgetURL, bytes.NewBufferString(find_in_stock))
 	if err != nil {
-		return "", "", "", fmt.Sprintf("Error creating request to find the product ID and quantity: %s", err)
+		return "", "", "", "", fmt.Sprintf("Error creating request to find the product ID and quantity: %s", err)
 	}
 
 	get.Header.Set("Content-Type", "application/json")
@@ -433,12 +434,12 @@ func getPlatformsID(product_id string) (string, string, string, string) {
 	// Get product data
 	appsresp, err := client.Do(get)
 	if err != nil {
-		return "", "", "", fmt.Sprintf("error geting product in Appsheet: %s", err)
+		return "", "", "", "", fmt.Sprintf("error geting product in Appsheet: %s", err)
 	}
 	defer appsresp.Body.Close()
 
 	if err != nil {
-		return "", "", "", fmt.Sprintf("unexpected status code from Appsheet: %d", appsresp.StatusCode)
+		return "", "", "", "", fmt.Sprintf("unexpected status code from Appsheet: %d", appsresp.StatusCode)
 	}
 
 	// Read the response body
@@ -459,13 +460,13 @@ func getPlatformsID(product_id string) (string, string, string, string) {
 	for _, item := range PlatformData {
 		if item.Product == product_id {
 			if item.WCID != "0" || item.MeliID != "0" {
-				return item.StockMargin, item.MeliID, item.WCID, ""
+				return item.StockMargin, item.AlepheeID, item.MeliID, item.WCID, ""
 			}
-			return "", "", "", "product not linked to any platform"
+			return "", "", "", "", "product not linked to any platform"
 		}
 	}
 
-	return "", "", "", "product not found in platforms database"
+	return "", "", "", "", "product not found in platforms database"
 
 }
 

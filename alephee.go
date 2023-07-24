@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 type AlepheePriceResponse struct {
@@ -204,4 +205,57 @@ func updateRumboPricesAlephee() {
 
 	}
 
+}
+
+/*
+https://api.alephcrm.com/v2/products?API_KEY=8F509A97-B5C8-4B9E-8148-07C055C54C05&accountId=3319
+
+[
+    {
+      "sku": "1025700",
+      "stock": {
+        "quantity": 2}
+    }
+  ]
+*/
+
+func updateAlephee(alephee_id string, stock interface{}) string {
+
+	URL := fmt.Sprintf("https://api.alephcrm.com/v2/products?API_KEY=%s&accountId=%s", os.Getenv("alephee_api_key"), os.Getenv("alephee_app_id"))
+	payload := fmt.Sprintf(`
+	[
+		{
+		  "sku": "%s",
+		  "stock": {
+			"quantity": %s}
+		}
+	  ]`, fmt.Sprint(alephee_id), fmt.Sprint(convertToString(stock)))
+
+	req, err := http.NewRequest(http.MethodPut, URL, bytes.NewBufferString(payload))
+	if err != nil {
+		return "error creating request for alephee:" + fmt.Sprint(err)
+	}
+
+	client := http.DefaultClient
+	resp, err := client.Do(req)
+	if err != nil {
+		return "error updating product in alephee:" + fmt.Sprint(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != 412 && resp.StatusCode != 429 {
+		return "unexpected status code from alephee:" + fmt.Sprint(resp.StatusCode)
+	}
+
+	if resp.StatusCode == 412 {
+		return "412: no changes processed, possibly sku (alephee_id) not found"
+	}
+
+	if resp.StatusCode == 429 {
+		fmt.Println("Too Many Requests. Waiting for 1 minute and 5 seconds...")
+		time.Sleep(1*time.Minute + 5*time.Second) // Wait for 1 minute and 5 seconds
+		return updateAlephee(alephee_id, stock)
+	}
+
+	return ""
 }
