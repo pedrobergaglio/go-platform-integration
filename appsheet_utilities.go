@@ -39,11 +39,11 @@ type ASMovementWebhookPayload struct {
 }
 
 type ASPriceWebhookPayload struct {
-	ProductID       interface{} `json:"product_id"`
-	SalePrice       string      `json:"sale_price"`
-	WCID            interface{} `json:"wc_id"`
-	MeliID          interface{} `json:"meli_id"`
-	MeliPriceMargin int         `json:"meli_price_margin"`
+	ProductID       string `json:"product_id"`
+	SalePrice       string `json:"sale_price"`
+	WCID            string `json:"wc_id"`
+	MeliID          string `json:"meli_id"`
+	MeliPriceMargin string `json:"meli_price_margin"`
 }
 
 type stockData struct {
@@ -207,7 +207,7 @@ func handleASPriceWebhook(w http.ResponseWriter, r *http.Request) {
 	// Log the received payload
 	log.Println("updated price product from app:", payload.ProductID)
 
-	log.Println("meli_id:", payload.MeliID, "wc_id:", payload.WCID, "price:", payload.SalePrice)
+	log.Println("meli_id:", convertToString(payload.MeliID), "wc_id:", convertToString(payload.WCID), "price:", convertToString(payload.SalePrice))
 
 	// Update the MELI product
 
