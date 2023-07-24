@@ -78,8 +78,6 @@ func main() {
 
 	updateRumboPricesAlephee()
 
-	//os.Setenv("meli_refresh_token", "TG-64b08f898b72c50001cbe90e-1423001750")
-
 	// Start a background goroutine to periodically refresh prices and tokens
 	go refreshPeriodically()
 
