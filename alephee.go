@@ -32,8 +32,8 @@ func updateRumboPricesAlephee() {
 
 	// Define the data struct for the response
 	type ResponseData struct {
-		AppsheetProductID string `json:"product_id"`
-		AppsheetAlepheeID string `json:"alephee_id"`
+		ID        string `json:"product_id"`
+		AlepheeID string `json:"alephee_id"`
 	}
 
 	//*******************************
@@ -42,14 +42,14 @@ func updateRumboPricesAlephee() {
 
 	// Prepare the payload for finding the product ID and quantity
 	payload := `{
-			"Action": "Find",
-			"Properties": {
-				"Locale": "es-US",
-				"Selector": "Filter(PLATFORMS, ISNOTBANK([alephee_id]))"
-				"Timezone": "Argentina Standard Time",
-			},
-			"Rows": []
-		}`
+		"Action": "Find",
+		"Properties": {
+			"Locale": "es-US",
+			"Selector": "Filter(PLATFORMS, [alephee_id]<>0)",
+			"Timezone": "Argentina Standard Time"
+		},
+		"Rows": []
+}`
 
 	// Create the request
 	requestURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/PLATFORMS/Action", os.Getenv("appsheet_id"))
@@ -94,14 +94,18 @@ func updateRumboPricesAlephee() {
 	}
 
 	//*******************************
-	//for each product, get the price and update it in the app
+	//for each product, get the price
 	//*******************************
 
 	for _, item := range responseData {
 
 		//get the sale_price from alephee
 
-		URL := fmt.Sprintf("https://api.alephcrm.com/v2/productlistings/search?API_KEY=%s&accountId=%s&sku=%s", os.Getenv("alephee_api_key"), os.Getenv("alephee_app_id"), item.AppsheetAlepheeID)
+		URL := fmt.Sprintf(
+			"https://api.alephcrm.com/v2/productlistings/search?API_KEY=%s&accountId=%s&sku=%s",
+			os.Getenv("alephee_api_key"),
+			os.Getenv("alephee_account_id"),
+			item.AlepheeID)
 
 		req, err := http.NewRequest(http.MethodGet, URL, nil)
 		if err != nil {
@@ -118,7 +122,7 @@ func updateRumboPricesAlephee() {
 		defer resp.Body.Close()
 
 		if resp.StatusCode == 429 {
-			fmt.Println("error too many requests. waiting for 1 minute and 5 seconds...")
+			fmt.Println("error too many requests. waiting for 1 minute")
 			time.Sleep(1*time.Minute + 5*time.Second) // Wait for 1 minute and 5 seconds
 			updateRumboPricesAlephee()
 			return
@@ -145,7 +149,7 @@ func updateRumboPricesAlephee() {
 
 		if response.TotalItemsRetrieved == 0 {
 			log.Println("error: product not found in alephee")
-			return
+			continue
 		}
 
 		if response.TotalItemsRetrieved > 1 {
@@ -155,7 +159,7 @@ func updateRumboPricesAlephee() {
 		// Iterate over the results to get the product price
 		sale_price := ""
 		for _, orderItem := range response.ResultItems {
-			if orderItem.ItemSKU == item.AppsheetAlepheeID {
+			if orderItem.ItemSKU == item.AlepheeID {
 				sale_price = convertToString(orderItem.ItemPrice)
 				break
 			}
@@ -163,17 +167,19 @@ func updateRumboPricesAlephee() {
 
 		if sale_price == "" {
 			log.Println("error: not sale price assigned")
-			return
+			continue
 		}
 
-		//update sale_price in the app
+		//*******************************
+		//for each product, update the price in the app
+		//*******************************
 
 		payload := fmt.Sprintf(`
 		{
 			"Action": "Edit",
 			"Properties": {
 				"Locale": "es-US",
-				"Timezone": "Argentina Standard Time",
+				"Timezone": "Argentina Standard Time"
 			},
 			"Rows": [
 				{
@@ -181,9 +187,9 @@ func updateRumboPricesAlephee() {
 					"sale_price": %s
 				}
 			]
-		}`, item.AppsheetProductID, sale_price)
+		}`, item.ID, sale_price)
 		// Create the request
-		requestURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/STOCK/Action", os.Getenv("appsheet_id"))
+		requestURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/platforms/Action", os.Getenv("appsheet_id"))
 		req, err = http.NewRequest(http.MethodPost, requestURL, bytes.NewBufferString(payload))
 		if err != nil {
 			log.Printf("failed to create request: %v", err)
