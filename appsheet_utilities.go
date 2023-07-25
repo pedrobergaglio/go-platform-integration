@@ -90,7 +90,7 @@ func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	} else {
 		// Log the received payload
-		log.Println("movement in product_id:", payload.ProductID)
+		log.Println("notification for movement in product_id:", payload.ProductID)
 	}
 
 	//Wait 3 seconds
@@ -105,9 +105,6 @@ func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Print the values
-	log.Println("oran stock:", total)
-
 	//Get platforms ids
 	stock_margin, alephee_id, meli_id, wc_id, error := getPlatformsID(convertToString(payload.ProductID))
 	if error != "" {
@@ -115,8 +112,6 @@ func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
-	log.Println("meli_id:", meli_id, "wc_id", wc_id, "alephee_id", alephee_id)
 
 	//Compute and format stock with margin substracted
 	totalint, err := strconv.Atoi(total)
@@ -137,35 +132,29 @@ func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 
 	stock_minus_margin := convertToString(stock_minus_marginint)
 
-	log.Println("total_stock:", total, "margin:", stock_margin, "stock_updated:", stock_minus_margin)
-
 	// Print the values
 	//log.Println("Woocommerce ID:", woo_id)
 
 	flag := 0
-	/*
-		// Update the MELI product
-		//if meli_id != "0" && alephee_id == "0" {
-		if meli_id != "0" {
-			error = updateMeli(meli_id, "available_quantity", stock_margin)
-			if error != "" {
-				log.Println("error updating stock in meli:", error)
-				flag = 1
-			} else {
-				log.Println("entro meli")
-			}
-		} else {
-			log.Println("product not linked to meli")
+
+	// Update the MELI product
+	if meli_id != "0" && alephee_id == "0" {
+		//if meli_id != "0" {
+		error = updateMeli(meli_id, "available_quantity", stock_minus_margin)
+		if error != "" {
+			log.Println("error updating stock in meli:", error)
+			flag = 1
 		}
-	*/
+	} else {
+		log.Println("product not linked to meli")
+	}
+
 	// Update the ALEPHEE product
 	if alephee_id != "0" {
-		error = updateAlephee(alephee_id, stock_margin)
+		error = updateAlephee(alephee_id, stock_minus_margin)
 		if error != "" {
 			log.Println("error updating stock in alephee:", error)
 			flag = 1
-		} else {
-			log.Println("entro alephee")
 		}
 	} else {
 		log.Println("product not linked to alephee")
@@ -173,12 +162,10 @@ func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 
 	// Update the WooCommerce product
 	if wc_id != "0" {
-		error = updateWC(wc_id, "stock_quantity", stock_margin)
+		error = updateWC(wc_id, "stock_quantity", stock_minus_margin)
 		if error != "" {
 			log.Println("error updating stock in WC:", error)
 			flag = 1
-		} else {
-			log.Println("entro wc")
 		}
 	} else {
 		log.Println("product not linked to wc")
@@ -191,7 +178,7 @@ func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 	// Write a success response if everything is processed successfully
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("webhook processed successfully"))
-	log.Println("movement processed")
+	//log.Println("movement processed")
 
 }
 
@@ -211,39 +198,36 @@ func handleASPriceWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Log the received payload
-	log.Println("updated price product from app:", payload.ProductID)
-
-	log.Println("meli_id:", convertToString(payload.MeliID), "wc_id:", convertToString(payload.WCID), "price:", convertToString(payload.SalePrice))
+	log.Println("notification for updated price received:", convertToString(payload.SalePrice))
 
 	// Update the MELI product
 
 	flag := 0
 
-	if convertToString(payload.MeliID) != "0" && convertToString(payload.AlepheeID) == "0" {
+	if convertToString(payload.MeliID) != "0" {
 
-		sale_price, err := strconv.ParseFloat(payload.SalePrice, 64)
-		if err != nil {
-			log.Printf("error parsing sale price to float: %v", err)
-			return
-		}
+		if convertToString(payload.AlepheeID) == "0" {
 
-		margin, err := strconv.Atoi(convertToString(payload.MeliPriceMargin))
-		if err != nil {
-			log.Printf("error parsing margin to float: %v", err)
-			return
-		}
+			sale_price, err := strconv.ParseFloat(payload.SalePrice, 64)
+			if err != nil {
+				log.Printf("error parsing sale price to float: %v", err)
+				return
+			}
 
-		percent_margin := (1 + margin/100)
-		meli_price := sale_price * float64(percent_margin)
+			margin, err := strconv.Atoi(convertToString(payload.MeliPriceMargin))
+			if err != nil {
+				log.Printf("error parsing margin to float: %v", err)
+				return
+			}
 
-		log.Println("price:", payload.SalePrice, "meli_price:", meli_price)
+			percent_margin := (1 + margin/100)
+			meli_price := sale_price * float64(percent_margin)
 
-		errr := updateMeli(convertToString(payload.MeliID), "price", convertToString(meli_price))
-		if errr != "" {
-			log.Println("error updating meli price:", errr)
-			flag = 1
-		} else {
-			log.Println("entro meli")
+			errr := updateMeli(convertToString(payload.MeliID), "price", convertToString(meli_price))
+			if errr != "" {
+				log.Println("error updating meli price:", errr)
+				flag = 1
+			}
 		}
 	} else {
 		log.Println("product not linked to meli")
@@ -255,8 +239,6 @@ func handleASPriceWebhook(w http.ResponseWriter, r *http.Request) {
 		if errr != "" {
 			log.Println("error updating Woocommerce price:", errr)
 			flag = 1
-		} else {
-			log.Println("entro wc")
 		}
 	} else {
 		log.Println("product not linked to wc")
