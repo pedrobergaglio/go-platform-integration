@@ -226,13 +226,16 @@ func handleASPriceWebhook(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		margin, err := strconv.ParseFloat(convertToString(payload.MeliPriceMargin), 32)
+		margin, err := strconv.Atoi(convertToString(payload.MeliPriceMargin))
 		if err != nil {
 			log.Printf("error parsing margin to float: %v", err)
 			return
 		}
 
-		meli_price := sale_price * (1 + margin/100)
+		percent_margin := (1 + margin/100)
+		meli_price := sale_price * float64(percent_margin)
+
+		log.Println("price:", payload.SalePrice, "meli_price:", meli_price)
 
 		errr := updateMeli(convertToString(payload.MeliID), "price", convertToString(meli_price))
 		if errr != "" {
