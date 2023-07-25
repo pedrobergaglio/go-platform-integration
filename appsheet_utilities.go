@@ -653,6 +653,8 @@ func handleASCountingWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Println(counting.ID, counting.Datetime, counting.Location, counting.User)
+
 	// Prepare the payload for finding the product ID and quantity
 	payload := fmt.Sprintf(`{
 		"Action": "Find",
@@ -736,17 +738,20 @@ func handleASCountingWebhook(w http.ResponseWriter, r *http.Request) {
 		quantity := new - old
 		quantitystr := convertToString(quantity)
 
-		if counting.Location == "fabrica" {
+		if counting.Location == "Fábrica" {
 			addMovement(item.ID, quantitystr, "0", "0", "0", movement_type)
-		}
-		if counting.Location == "oran" {
+			log.Println("movement added")
+		} else if counting.Location == "Orán" {
 			addMovement(item.ID, "0", quantitystr, "0", "0", movement_type)
-		}
-		if counting.Location == "rodriguez" {
+			log.Println("movement added")
+		} else if counting.Location == "Rodriguez" {
 			addMovement(item.ID, "0", "0", quantitystr, "0", movement_type)
-		}
-		if counting.Location == "marcos_paz" {
+			log.Println("movement added")
+		} else if counting.Location == "Marcos Paz" {
 			addMovement(item.ID, "0", "0", "0", quantitystr, movement_type)
+			log.Println("movement added")
+		} else {
+			log.Println("movement not added")
 		}
 
 	}
