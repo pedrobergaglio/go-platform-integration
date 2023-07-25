@@ -97,7 +97,7 @@ func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 	time.Sleep(2 * time.Second)
 
 	//Get product data
-	total, err := getProductStock(convertToString(payload.ProductID), "oran")
+	total, err := getProductStock(convertToString(payload.ProductID), "Orán")
 	if err != nil {
 		log.Println("error getting product total stock:", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -432,19 +432,19 @@ func getProductStock(product_id string, location string) (string, error) {
 	}
 	for _, item := range responseData {
 		if item.Product == product_id {
-			if location == "oran" {
+			if location == "Orán" {
 				return item.Oran, nil
 			}
-			if location == "rodriguez" {
+			if location == "Rodriguez" {
 				return item.Rodriguez, nil
 			}
-			if location == "marcos_paz" {
+			if location == "Marcos Paz" {
 				return item.MarcosPaz, nil
 			}
-			if location == "fabrica" {
+			if location == "Fábrica" {
 				return item.Fabrica, nil
 			}
-			if location == "total" {
+			if location == "Total" {
 				return item.Total, nil
 			}
 		}
