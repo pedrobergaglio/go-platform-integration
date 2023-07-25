@@ -49,10 +49,11 @@ func updateRumboPricesAlephee() {
 			"Timezone": "Argentina Standard Time"
 		},
 		"Rows": []
-}`
+		}`
 
 	// Create the request
-	requestURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/PLATFORMS/Action", os.Getenv("appsheet_id"))
+	requestURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/PLATFORMS/Action",
+		os.Getenv("appsheet_id"))
 	key := os.Getenv("appsheet_key")
 	req, err := http.NewRequest(http.MethodPost, requestURL, bytes.NewBufferString(payload))
 	if err != nil {
@@ -212,7 +213,7 @@ func updateRumboPricesAlephee() {
 
 		// Check the response status code
 		if resp.StatusCode != http.StatusOK {
-			log.Printf("unexpected status code: %d", resp.StatusCode)
+			log.Printf("unexpected status code from appsheet when updating price: %d", resp.StatusCode)
 			return
 		}
 
