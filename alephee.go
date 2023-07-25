@@ -75,9 +75,11 @@ func updateRumboPricesAlephee() {
 
 	// Check the response status code
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("unexpected status code from appsheet: %d", resp.StatusCode)
+		log.Printf("couldn't get products with alephee code: unexpected status code from appsheet: %d", resp.StatusCode)
 		return
 	}
+
+	log.Println("alephee products returned correctly")
 
 	// Read the response body
 	body, err := io.ReadAll(resp.Body)
@@ -98,7 +100,19 @@ func updateRumboPricesAlephee() {
 	//for each product, get the price
 	//*******************************
 
+	requestCounter := 0
+
 	for _, item := range responseData {
+
+		requestCounter++
+
+		// Check if the counter is a multiple of 30
+		if requestCounter == 29 {
+			//Sleep
+			time.Sleep(1*time.Minute + 5*time.Second)
+			// Reset the counter and update the last request time
+			requestCounter = 0
+		}
 
 		//get the sale_price from alephee
 
