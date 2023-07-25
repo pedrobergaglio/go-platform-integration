@@ -658,7 +658,7 @@ func handleASCountingWebhook(w http.ResponseWriter, r *http.Request) {
 		"Action": "Find",
 		"Properties": {
 			"Locale": "es-US",
-			"Selector": "Filter(items_to_count, [user]=%s)"
+			"Selector": 'Filter(items_to_count, [user]="%s")',
 			"Timezone": "Argentina Standard Time",
 		},
 		"Rows": []
@@ -685,11 +685,15 @@ func handleASCountingWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 	defer resp.Body.Close()
 
+	log.Printf("request sent to appsheet")
+
 	// Check the response status code
 	if resp.StatusCode != http.StatusOK {
 		log.Printf("unexpected status code from appsheet: %d", resp.StatusCode)
 		return
 	}
+
+	log.Printf("request returned correctly")
 
 	// Read the response body
 	body, err := io.ReadAll(resp.Body)
