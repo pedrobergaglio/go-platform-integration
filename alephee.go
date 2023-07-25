@@ -104,11 +104,11 @@ func updateRumboPricesAlephee() {
 
 	requestCounter := 0
 
-	log.Println("sending get requests for prices")
-
 	for _, item := range responseData {
 
 		requestCounter++
+
+		log.Println("updating item", item.ID)
 
 		// Check if the counter is a multiple of 30
 		if requestCounter == 29 {
@@ -228,8 +228,6 @@ func updateRumboPricesAlephee() {
 			return
 		}
 		defer resp.Body.Close()
-
-		log.Println("updating an item in appsheet")
 
 		// Check the response status code
 		if resp.StatusCode != http.StatusOK {

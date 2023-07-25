@@ -75,8 +75,8 @@ func refreshToken() error {
 		return err
 	}
 
-	fmt.Println("new refresh token:", tokenResponse.RefreshToken)
-	fmt.Println("new access token:", tokenResponse.AccessToken)
+	//fmt.Println("new refresh token:", tokenResponse.RefreshToken)
+	//fmt.Println("new access token:", tokenResponse.AccessToken)
 
 	return nil
 }
@@ -85,7 +85,7 @@ func refreshPeriodically() {
 	refreshInterval := time.Hour * 5 // Refresh the token every hour (adjust as needed)
 
 	for {
-		updateRumboPricesAlephee()
+		//updateRumboPricesAlephee()
 		err := refreshToken()
 		if err != nil {
 			log.Println("retrying. there was an error refreshing the meli token:", err)
