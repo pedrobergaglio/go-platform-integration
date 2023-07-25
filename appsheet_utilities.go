@@ -649,6 +649,8 @@ type ASItemsToCountWebhookPayload struct {
 
 func handleASCountingWebhook(w http.ResponseWriter, r *http.Request) {
 
+	log.Println("counting added")
+
 	// Ensure that the request method is POST
 	if r.Method != http.MethodPost {
 		log.Println(http.StatusMethodNotAllowed)
