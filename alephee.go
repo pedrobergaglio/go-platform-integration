@@ -73,6 +73,8 @@ func updateRumboPricesAlephee() {
 	}
 	defer resp.Body.Close()
 
+	log.Println("send first request to appsheet")
+
 	// Check the response status code
 	if resp.StatusCode != http.StatusOK {
 		log.Printf("couldn't get products with alephee code: unexpected status code from appsheet: %d", resp.StatusCode)
@@ -101,6 +103,8 @@ func updateRumboPricesAlephee() {
 	//*******************************
 
 	requestCounter := 0
+
+	log.Println("sending get requests for prices")
 
 	for _, item := range responseData {
 
@@ -224,6 +228,8 @@ func updateRumboPricesAlephee() {
 			return
 		}
 		defer resp.Body.Close()
+
+		log.Println("updating an item in appsheet")
 
 		// Check the response status code
 		if resp.StatusCode != http.StatusOK {
