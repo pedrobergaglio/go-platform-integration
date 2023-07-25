@@ -90,7 +90,7 @@ func handleWCWebhook(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		_, err = postMovement(product_id, item.Quantity, "Woocommerce")
+		_, err = addMovement(product_id, "0", convertToString(-item.Quantity), "0", "0", "Woocommerce")
 		if err != nil {
 			log.Println("error posting movement:", err)
 			w.WriteHeader(http.StatusInternalServerError)

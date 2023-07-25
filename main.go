@@ -86,6 +86,7 @@ func main() {
 	http.HandleFunc("/woocommerce", handleWCWebhook)
 	http.HandleFunc("/price", handleASPriceWebhook)
 	http.HandleFunc("/meli", handleMeliWebhook)
+	http.HandleFunc("/countings", handleASCountingWebhook)
 
 	// Root route handler
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

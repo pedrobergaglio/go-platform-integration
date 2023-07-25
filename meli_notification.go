@@ -147,7 +147,7 @@ func handleMeliWebhook(w http.ResponseWriter, r *http.Request) {
 		log.Printf("product_id: %s", product_id)
 		log.Println("quantity:", item.Quantity)
 
-		_, err = postMovement(product_id, item.Quantity, "Mercado Libre")
+		_, err = addMovement(product_id, "0", convertToString(-item.Quantity), "0", "0", "Mercado Libre")
 		if err != nil {
 			log.Println("error posting movement:", err)
 			w.WriteHeader(http.StatusInternalServerError)

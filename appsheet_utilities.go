@@ -47,8 +47,12 @@ type ASPriceWebhookPayload struct {
 }
 
 type stockData struct {
-	Total   string `json:"oran"`
-	Product string `json:"product_id"`
+	Oran      string `json:"oran"`
+	Rodriguez string `json:"rodriguez"`
+	Fabrica   string `json:"fabrica"`
+	MarcosPaz string `json:"marcos_paz"`
+	Total     string `json:"total_stock"`
+	Product   string `json:"product_id"`
 }
 
 type PlatformsData struct {
@@ -93,7 +97,7 @@ func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 	time.Sleep(2 * time.Second)
 
 	//Get product data
-	total, err := getProductTotalStock(convertToString(payload.ProductID))
+	total, err := getProductStock(convertToString(payload.ProductID), "oran")
 	if err != nil {
 		log.Println("error getting product total stock:", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -330,7 +334,7 @@ func productIDFromWC(wc_id string) (string, error) {
 	return "", errors.New("product searched correctly but not found in database")
 }
 
-func postMovement(product_id string, quantity int, platform string) (string, error) {
+func addMovement(product_id string, fabrica string, oran string, rodriguez string, marcos_paz string, platform string) (string, error) {
 
 	payload := fmt.Sprintf(`
 	{
@@ -342,11 +346,14 @@ func postMovement(product_id string, quantity int, platform string) (string, err
 		"Rows": [
 			{
 				"product_id": %s,
+				"fabrica": %s,
 				"oran": %s,
+				"rodriguez": %s,
+				"marcos_paz": %s,
 				"movement_type": "%s"
 			}
 		]
-	}`, product_id, convertToString(-quantity), platform)
+	}`, product_id, fabrica, oran, rodriguez, marcos_paz, platform)
 	// Create the request
 	requestURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/MOVEMENTS/Action", os.Getenv("appsheet_id"))
 	req, err := http.NewRequest(http.MethodPost, requestURL, bytes.NewBufferString(payload))
@@ -374,7 +381,7 @@ func postMovement(product_id string, quantity int, platform string) (string, err
 	return convertToString(resp.StatusCode), nil
 }
 
-func getProductTotalStock(product_id string) (string, error) {
+func getProductStock(product_id string, location string) (string, error) {
 
 	stockgetURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/STOCK/Action", os.Getenv("appsheet_id"))
 	find_in_stock := `{
@@ -425,7 +432,21 @@ func getProductTotalStock(product_id string) (string, error) {
 	}
 	for _, item := range responseData {
 		if item.Product == product_id {
-			return item.Total, nil
+			if location == "oran" {
+				return item.Oran, nil
+			}
+			if location == "rodriguez" {
+				return item.Rodriguez, nil
+			}
+			if location == "marcos_paz" {
+				return item.MarcosPaz, nil
+			}
+			if location == "fabrica" {
+				return item.Fabrica, nil
+			}
+			if location == "total" {
+				return item.Total, nil
+			}
 		}
 	}
 
@@ -611,4 +632,130 @@ func productIDFromMeli(meli_id string) (string, error) {
 	}
 
 	return "", errors.New("product searched correctly but not found in database")
+}
+
+type ASCountingsWebhookPayload struct {
+	ID       string `json:"id"`
+	Datetime string `json:"datetime"`
+	User     string `json:"user"`
+	Location string `json:"location"`
+}
+
+type ASItemsToCountWebhookPayload struct {
+	ID       string `json:"product_id"`
+	Quantity string `json:"quantity"`
+	User     string `json:"user"`
+}
+
+func handleASCountingWebhook(w http.ResponseWriter, r *http.Request) {
+
+	// Ensure that the request method is POST
+	if r.Method != http.MethodPost {
+		log.Println(http.StatusMethodNotAllowed)
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Parse the incoming request body
+	var counting ASCountingsWebhookPayload
+	if err := json.NewDecoder(r.Body).Decode(&counting); err != nil {
+		log.Println("error decoding payload:", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Prepare the payload for finding the product ID and quantity
+	payload := fmt.Sprintf(`{
+		"Action": "Find",
+		"Properties": {
+			"Locale": "es-US",
+			"Selector": "Filter(items_to_count, [user]=%s)"
+			"Timezone": "Argentina Standard Time",
+		},
+		"Rows": []
+	}`, counting.User)
+
+	// Create the request
+	requestURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/items_to_count/Action", os.Getenv("appsheet_id"))
+	key := os.Getenv("appsheet_key")
+	req, err := http.NewRequest(http.MethodPost, requestURL, bytes.NewBufferString(payload))
+	if err != nil {
+		log.Printf("failed to create request for appsheet: %v", err)
+		return
+	}
+
+	// Set request headers
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("ApplicationAccessKey", key)
+
+	// Send the request
+	client := http.DefaultClient
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("failed to send request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Check the response status code
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("unexpected status code from appsheet: %d", resp.StatusCode)
+		return
+	}
+
+	// Read the response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("failed to read response body: %v", err)
+		return
+	}
+
+	// Unmarshal the JSON data into the struct
+	var responseData []ASItemsToCountWebhookPayload
+	err = json.Unmarshal(body, &responseData)
+	if err != nil {
+		log.Printf("failed to unmarshal response data: %v", err)
+		return
+	}
+
+	movement_type := fmt.Sprintf("Conteo %s", counting.ID)
+
+	for _, item := range responseData {
+		stock_value, err := getProductStock(item.ID, counting.Location)
+		if err != nil {
+			log.Printf("error getting product stock: %v", err)
+			return
+		}
+
+		if stock_value == item.Quantity {
+			continue
+		}
+
+		old, err := strconv.Atoi(stock_value)
+		if err != nil {
+			log.Printf("error parsing stock quantity to int: %v", err)
+			return
+		}
+		new, err := strconv.Atoi(item.Quantity)
+		if err != nil {
+			log.Printf("error parsing stock quantity to int: %v", err)
+			return
+		}
+		quantity := new - old
+		quantitystr := convertToString(quantity)
+
+		if counting.Location == "fabrica" {
+			addMovement(item.ID, quantitystr, "0", "0", "0", movement_type)
+		}
+		if counting.Location == "oran" {
+			addMovement(item.ID, "0", quantitystr, "0", "0", movement_type)
+		}
+		if counting.Location == "rodriguez" {
+			addMovement(item.ID, "0", "0", quantitystr, "0", movement_type)
+		}
+		if counting.Location == "marcos_paz" {
+			addMovement(item.ID, "0", "0", "0", quantitystr, movement_type)
+		}
+
+	}
+
 }
