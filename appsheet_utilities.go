@@ -42,6 +42,7 @@ type ASPriceWebhookPayload struct {
 	ProductID       string `json:"product_id"`
 	SalePrice       string `json:"sale_price"`
 	WCID            string `json:"wc_id"`
+	AlepheeID       string `json:"alephee_id"`
 	MeliID          string `json:"meli_id"`
 	MeliPriceMargin string `json:"meli_price_margin"`
 }
@@ -218,9 +219,9 @@ func handleASPriceWebhook(w http.ResponseWriter, r *http.Request) {
 
 	flag := 0
 
-	if convertToString(payload.MeliID) != "0" {
+	if convertToString(payload.MeliID) != "0" && convertToString(payload.AlepheeID) == "0" {
 
-		sale_price, err := strconv.ParseFloat(payload.SalePrice, 32)
+		sale_price, err := strconv.ParseFloat(payload.SalePrice, 64)
 		if err != nil {
 			log.Printf("error parsing sale price to float: %v", err)
 			return
