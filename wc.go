@@ -106,13 +106,15 @@ func updateWC(wc_id string, field string, value interface{}) string {
 	wcURL := fmt.Sprintf("https://www.energiaglobal.com.ar/wp-json/wc/v3/products/%s", fmt.Sprint(wc_id))
 	wcPayload := fmt.Sprintf(`{"%s": %s}`, fmt.Sprint(field), fmt.Sprint(value))
 
+	log.Println(wcURL, wcPayload)
+
 	req, err := http.NewRequest(http.MethodPut, wcURL, bytes.NewBufferString(wcPayload))
 	if err != nil {
 		return "error creating request for WooCommerce:" + fmt.Sprint(err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set(os.Getenv("wc_client"), os.Getenv("wc_secret"))
+	req.SetBasicAuth(os.Getenv("wc_client"), os.Getenv("wc_secret"))
 
 	log.Println(os.Getenv("wc_client"), os.Getenv("wc_secret"))
 

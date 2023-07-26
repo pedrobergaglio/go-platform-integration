@@ -93,6 +93,8 @@ func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 
 	flag := 0
 
+	log.Println("alephee_id", alephee_id)
+
 	// Update the MELI product
 	if meli_id != "0" {
 		if alephee_id == "0000000" {
@@ -169,9 +171,14 @@ func handleASPriceWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//set it to len=7
-	for len(payload.AlepheeID) < 7 {
-		payload.AlepheeID = "0" + payload.AlepheeID
+
+	// Convert the total_stock value to an integer
+	alephee_id_int, err := strconv.Atoi(payload.AlepheeID)
+	if err != nil {
+		return
 	}
+	// Format the total_stock with leading zeros (7 characters)
+	formatted_alephee_id := fmt.Sprintf("%07d", alephee_id_int)
 
 	// Log the received payload
 	log.Println("notification for updated price received:", convertToString(payload.SalePrice))
@@ -182,7 +189,7 @@ func handleASPriceWebhook(w http.ResponseWriter, r *http.Request) {
 
 	if convertToString(payload.MeliID) != "0" {
 
-		if convertToString(payload.AlepheeID) == "0000000" {
+		if convertToString(formatted_alephee_id) == "0000000" {
 
 			sale_price, err := strconv.ParseFloat(payload.SalePrice, 64)
 			if err != nil {
@@ -618,10 +625,16 @@ func getPlatformsID(product_id string) (string, string, string, string, string) 
 		if item.Product == product_id {
 			if item.WCID != "0" || item.MeliID != "0" {
 				//set it to len=7
-				for len(item.AlepheeID) < 7 {
-					item.AlepheeID = "0" + item.AlepheeID
+
+				// Convert the total_stock value to an integer
+				alephee_id_int, err := strconv.Atoi(item.AlepheeID)
+				if err != nil {
+					return "", "", "", "", fmt.Sprintln("Error converting total_stock to int:", err)
 				}
-				return item.StockMargin, item.AlepheeID, item.MeliID, item.WCID, ""
+				// Format the total_stock with leading zeros (7 characters)
+				formatted_alephee_id := fmt.Sprintf("%07d", alephee_id_int)
+
+				return item.StockMargin, formatted_alephee_id, item.MeliID, item.WCID, ""
 			}
 			return "", "", "", "", "product not linked to any platform"
 		}
