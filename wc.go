@@ -114,6 +114,8 @@ func updateWC(wc_id string, field string, value interface{}) string {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set(os.Getenv("wc_client"), os.Getenv("wc_secret"))
 
+	log.Println(os.Getenv("wc_client"), os.Getenv("wc_secret"))
+
 	client := http.DefaultClient
 	resp, err := client.Do(req)
 	if err != nil {

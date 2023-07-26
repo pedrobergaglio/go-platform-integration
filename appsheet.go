@@ -609,7 +609,7 @@ func getPlatformsID(product_id string) (string, string, string, string, string) 
 	var PlatformData []PlatformsData
 
 	// Unmarshal the JSON data into the struct
-	err = json.Unmarshal(body, &PlatformData)
+	err = json.Unmarshal([]byte(body), &PlatformData)
 	if err != nil {
 		log.Fatal("error unmarshaling response data:", err)
 	}
