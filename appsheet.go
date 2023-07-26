@@ -95,7 +95,7 @@ func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 
 	// Update the MELI product
 	if meli_id != "0" {
-		if alephee_id == "0000000" {
+		if alephee_id == "0" {
 			//if meli_id != "0" {
 			error = updateMeli(meli_id, "available_quantity", stock_minus_margin)
 			if error != "" {
@@ -108,7 +108,7 @@ func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update the ALEPHEE product
-	if alephee_id != "0000000" {
+	if alephee_id != "0" {
 		error = updateAlephee(alephee_id, stock_minus_margin)
 		if error != "" {
 			log.Println("error updating stock in alephee:", error)

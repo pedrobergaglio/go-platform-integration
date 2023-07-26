@@ -112,7 +112,7 @@ func updateWC(wc_id string, field string, value interface{}) string {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.SetBasicAuth(os.Getenv("wc_client"), os.Getenv("wc_secret"))
+	req.Header.Set(os.Getenv("wc_client"), os.Getenv("wc_secret"))
 
 	client := http.DefaultClient
 	resp, err := client.Do(req)

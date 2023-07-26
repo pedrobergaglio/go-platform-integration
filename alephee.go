@@ -110,8 +110,6 @@ func updateRumboPricesAlephee() {
 
 		requestCounter++
 
-		log.Println("updating item", item.ID)
-
 		// Check if the counter is a multiple of 30
 		if requestCounter == 29 {
 			//Sleep
@@ -137,7 +135,7 @@ func updateRumboPricesAlephee() {
 		client := http.DefaultClient
 		resp, err := client.Do(req)
 		if err != nil {
-			log.Println("error getting product price:", err)
+			log.Println(item.ID, "error getting product price:", err)
 			return
 		}
 		defer resp.Body.Close()
@@ -150,8 +148,8 @@ func updateRumboPricesAlephee() {
 		}
 
 		if resp.StatusCode != http.StatusOK {
-			log.Println("unexpected status code from alephee while getting product price: " + fmt.Sprint(resp.StatusCode))
-			return
+			log.Println(item.ID, "unexpected status code from alephee while getting product price: "+fmt.Sprint(resp.StatusCode))
+			continue
 		}
 
 		// Read the request body
@@ -169,12 +167,12 @@ func updateRumboPricesAlephee() {
 		}
 
 		if response.TotalItemsRetrieved == 0 {
-			log.Println("error: product not found in alephee")
+			log.Println(item.ID, "error: product not found in alephee")
 			continue
 		}
 
 		if response.TotalItemsRetrieved > 1 {
-			log.Println("possible error: more than one product found in alephee")
+			log.Println(item.ID, "possible error: more than one product found in alephee")
 		}
 
 		// Iterate over the results to get the product price
@@ -187,7 +185,7 @@ func updateRumboPricesAlephee() {
 		}
 
 		if sale_price == "" {
-			log.Println("error: not sale price assigned")
+			log.Println(item.ID, "error: not sale price assigned")
 			continue
 		}
 
@@ -233,11 +231,13 @@ func updateRumboPricesAlephee() {
 
 		// Check the response status code
 		if resp.StatusCode != http.StatusOK {
-			log.Printf("unexpected status code from appsheet when updating price: %d", resp.StatusCode)
-			return
+			log.Printf(item.ID, "unexpected status code from appsheet when updating price: %d", resp.StatusCode)
+			continue
 		}
 
 	}
+
+	log.Println("rumbo prices updated correctly")
 
 }
 

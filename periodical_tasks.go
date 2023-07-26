@@ -113,7 +113,7 @@ func refreshPeriodically() {
 	refreshInterval := time.Hour * 5 // Refresh the token every hour (adjust as needed)
 
 	for {
-		//updateRumboPricesAlephee()
+		updateRumboPricesAlephee()
 		checkStock()
 		err := refreshMeliToken()
 		if err != nil {
