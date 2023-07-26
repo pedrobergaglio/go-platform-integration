@@ -148,7 +148,7 @@ func updateRumboPricesAlephee() {
 		}
 
 		if resp.StatusCode != http.StatusOK {
-			log.Println(item.ID, "unexpected status code from alephee while getting product price: "+fmt.Sprint(resp.StatusCode))
+			log.Println(item.AlepheeID, "unexpected status code from alephee while getting product price: "+fmt.Sprint(resp.StatusCode))
 			continue
 		}
 
