@@ -53,20 +53,30 @@ func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 	//log.Println("Waiting two seconds to update...")
 	time.Sleep(2 * time.Second)
 
-	//Get product data
-	total, err := getProductStock(convertToString(payload.ProductID), "Orán")
-	if err != nil {
-		log.Println("error getting product total stock:", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
 	//Get platforms ids
-	stock_margin, alephee_id, meli_id, wc_id, error := getPlatformsID(convertToString(payload.ProductID))
+	stock_scope, stock_margin, alephee_id, meli_id, wc_id, error := getPlatformsID(convertToString(payload.ProductID))
 	if error != "" {
 		log.Println(error)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
+	}
+
+	//Get product data
+	total := ""
+	if stock_scope == "N" {
+		total, err = getProductStock(convertToString(payload.ProductID), "Orán")
+		if err != nil {
+			log.Println("error getting product total stock:", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	} else if stock_scope == "Y" {
+		total, err = getProductStock(convertToString(payload.ProductID), "Total")
+		if err != nil {
+			log.Println("error getting product total stock:", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	}
 
 	//Compute and format stock with margin substracted
@@ -576,10 +586,11 @@ type PlatformsData struct {
 	MeliID      string `json:"meli_id"`
 	AlepheeID   string `json:"alephee_id"`
 	StockMargin string `json:"stock_margin"`
+	StockScope  string `json:"stock_scope"`
 }
 
 // Returns the StockMargin, AlepheeID, MeliID, WCID based on a product_id
-func getPlatformsID(product_id string) (string, string, string, string, string) {
+func getPlatformsID(product_id string) (string, string, string, string, string, string) {
 
 	stockgetURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/PLATFORMS/Action", os.Getenv("appsheet_id"))
 	find_in_stock := `{
@@ -588,7 +599,7 @@ func getPlatformsID(product_id string) (string, string, string, string, string) 
 		"Rows": []}`
 	get, err := http.NewRequest(http.MethodPost, stockgetURL, bytes.NewBufferString(find_in_stock))
 	if err != nil {
-		return "", "", "", "", fmt.Sprintf("Error creating request to find the product ID and quantity: %s", err)
+		return "", "", "", "", "", fmt.Sprintf("Error creating request to find the product ID and quantity: %s", err)
 	}
 
 	get.Header.Set("Content-Type", "application/json")
@@ -598,12 +609,12 @@ func getPlatformsID(product_id string) (string, string, string, string, string) 
 	// Get product data
 	appsresp, err := client.Do(get)
 	if err != nil {
-		return "", "", "", "", fmt.Sprintf("error geting product in Appsheet: %s", err)
+		return "", "", "", "", "", fmt.Sprintf("error geting product in Appsheet: %s", err)
 	}
 	defer appsresp.Body.Close()
 
 	if err != nil {
-		return "", "", "", "", fmt.Sprintf("unexpected status code from Appsheet: %d", appsresp.StatusCode)
+		return "", "", "", "", "", fmt.Sprintf("unexpected status code from Appsheet: %d", appsresp.StatusCode)
 	}
 
 	// Read the response body
@@ -629,18 +640,18 @@ func getPlatformsID(product_id string) (string, string, string, string, string) 
 				// Convert the total_stock value to an integer
 				alephee_id_int, err := strconv.Atoi(item.AlepheeID)
 				if err != nil {
-					return "", "", "", "", fmt.Sprintln("Error converting total_stock to int:", err)
+					return "", "", "", "", "", fmt.Sprintln("Error converting total_stock to int:", err)
 				}
 				// Format the total_stock with leading zeros (7 characters)
 				formatted_alephee_id := fmt.Sprintf("%07d", alephee_id_int)
 
-				return item.StockMargin, formatted_alephee_id, item.MeliID, item.WCID, ""
+				return item.StockScope, item.StockMargin, formatted_alephee_id, item.MeliID, item.WCID, ""
 			}
-			return "", "", "", "", "product not linked to any platform"
+			return "", "", "", "", "", "product not linked to any platform"
 		}
 	}
 
-	return "", "", "", "", "product not found in platforms database"
+	return "", "", "", "", "", "product not found in platforms database"
 
 }
 
