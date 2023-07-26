@@ -237,7 +237,7 @@ func updateRumboPricesAlephee() {
 
 	}
 
-	log.Println("rumbo prices updated correctly")
+	log.Println("finished updating rumbo prices")
 
 }
 
