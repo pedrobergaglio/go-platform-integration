@@ -94,19 +94,21 @@ func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 	flag := 0
 
 	// Update the MELI product
-	if meli_id != "0" && alephee_id == "0" {
-		//if meli_id != "0" {
-		error = updateMeli(meli_id, "available_quantity", stock_minus_margin)
-		if error != "" {
-			log.Println("error updating stock in meli:", error)
-			flag = 1
+	if meli_id != "0" {
+		if alephee_id == "0000000" {
+			//if meli_id != "0" {
+			error = updateMeli(meli_id, "available_quantity", stock_minus_margin)
+			if error != "" {
+				log.Println("error updating stock in meli:", error)
+				flag = 1
+			}
 		}
 	} else {
 		log.Println("product not linked to meli")
 	}
 
 	// Update the ALEPHEE product
-	if alephee_id != "0" {
+	if alephee_id != "0000000" {
 		error = updateAlephee(alephee_id, stock_minus_margin)
 		if error != "" {
 			log.Println("error updating stock in alephee:", error)
@@ -134,6 +136,7 @@ func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 	// Write a success response if everything is processed successfully
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("webhook processed successfully"))
+	log.Println("movement processed correctly")
 
 }
 
@@ -173,7 +176,7 @@ func handleASPriceWebhook(w http.ResponseWriter, r *http.Request) {
 
 	if convertToString(payload.MeliID) != "0" {
 
-		if convertToString(payload.AlepheeID) == "0" {
+		if convertToString(payload.AlepheeID) == "0000000" {
 
 			sale_price, err := strconv.ParseFloat(payload.SalePrice, 64)
 			if err != nil {
@@ -187,10 +190,15 @@ func handleASPriceWebhook(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
+			//calculate the margin
 			percent_margin := (1 + margin/100)
 			meli_price := sale_price * float64(percent_margin)
 
-			errr := updateMeli(convertToString(payload.MeliID), "price", convertToString(meli_price))
+			//set the last digit to 0
+			string_meli_price := convertToString(meli_price)
+			length := len(string_meli_price)
+
+			errr := updateMeli(convertToString(payload.MeliID), "price", string_meli_price[:length-1]+"0")
 			if errr != "" {
 				log.Println("error updating meli price:", errr)
 				flag = 1
