@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,6 +11,8 @@ import (
 	"net/http"
 	"os"
 	"time"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
 type TokenResponse struct {
@@ -17,7 +20,9 @@ type TokenResponse struct {
 	AccessToken  string `json:"access_token"`
 }
 
-func refreshToken() error {
+// since meli access token expire every 6 hours,
+// refreshMeliToken function gets the last given refresh token to get a new access token
+func refreshMeliToken() error {
 
 	refreshToken := os.Getenv("meli_refresh_token")
 
@@ -81,15 +86,39 @@ func refreshToken() error {
 	return nil
 }
 
+// checkStock calls a store procedure in the mysql database to check if
+// the stock of each product corresponds to the stored movements
+func checkStock() {
+
+	// Connect to the MySQL database
+	db, err := sql.Open("mysql", "megared_pedro:Engsu_23@tcp(Mysql4.gohsphere.com)/megared_energiaglobal_23?charset=utf8")
+	if err != nil {
+		log.Fatal("Error connecting to the database:", err)
+	}
+	defer db.Close()
+
+	// Execute the query
+	rows, err := db.Query("CALL CHECK_STOCK()")
+	if err != nil {
+		log.Fatal("Error executing query:", err)
+	} else {
+		rows.Close()
+	}
+
+}
+
+// refreshPeriodically function runs every 5 hours to refresh the meli tokens,
+// check stock values, and collect alephee prices with updateRumboPricesAlephee()
 func refreshPeriodically() {
 	refreshInterval := time.Hour * 5 // Refresh the token every hour (adjust as needed)
 
 	for {
 		//updateRumboPricesAlephee()
-		err := refreshToken()
+		checkStock()
+		err := refreshMeliToken()
 		if err != nil {
 			log.Println("retrying. there was an error refreshing the meli token:", err)
-			err := refreshToken()
+			err := refreshMeliToken()
 			if err != nil {
 				log.Fatal("there was an error refreshing the meli token:", err)
 			}

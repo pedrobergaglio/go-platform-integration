@@ -11,57 +11,13 @@ import (
 	"os"
 	"strconv"
 	"time"
-
-	"github.com/spf13/viper"
 )
 
-func loadConfig() {
-	viper.SetConfigFile("resources/.env") // Set the path to your configuration file
-	viper.SetConfigType("env")
-	// Specify the configuration file type (e.g., "env", "json", "yaml", etc.)
-
-	err := viper.ReadInConfig() // Read the configuration file
-	if err != nil {
-		log.Fatalf("failed to read configuration file: %s", err)
-	}
-
-	// Set environment variables based on the configuration values
-	for key, value := range viper.AllSettings() {
-		//log.Println("adding ", key)
-		if err := os.Setenv(key, value.(string)); err != nil {
-			log.Fatalf("failed to set environment variable %s: %s", key, err)
-		}
-	}
-}
-
+// handleASMovementWebhook receives a product_id which stock has been modified
+// Then the function obtains the product stock in Oran, calculates the configured product stock margin
+// and then updates that stock value in the online sales platforms for that specific product
 type ASMovementWebhookPayload struct {
 	ProductID interface{} `json:"product_id"`
-}
-
-type ASPriceWebhookPayload struct {
-	ProductID       string `json:"product_id"`
-	SalePrice       string `json:"sale_price"`
-	WCID            string `json:"wc_id"`
-	AlepheeID       string `json:"alephee_id"`
-	MeliID          string `json:"meli_id"`
-	MeliPriceMargin string `json:"meli_price_margin"`
-}
-
-type stockData struct {
-	Oran      string `json:"oran"`
-	Rodriguez string `json:"rodriguez"`
-	Fabrica   string `json:"fabrica"`
-	MarcosPaz string `json:"marcos_paz"`
-	Total     string `json:"total_stock"`
-	Product   string `json:"product_id"`
-}
-
-type PlatformsData struct {
-	Product     string `json:"product_id"`
-	WCID        string `json:"wc_id"`
-	MeliID      string `json:"meli_id"`
-	AlepheeID   string `json:"alephee_id"`
-	StockMargin string `json:"stock_margin"`
 }
 
 func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
@@ -178,8 +134,19 @@ func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 	// Write a success response if everything is processed successfully
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("webhook processed successfully"))
-	//log.Println("movement processed")
 
+}
+
+// handleASPriceWebhook receives a product data with a price value that has been modified
+// Then the function calculates the configured price margin for meli,
+// and updates the prices in the online platforms for that specific product
+type ASPriceWebhookPayload struct {
+	ProductID       string `json:"product_id"`
+	SalePrice       string `json:"sale_price"`
+	WCID            string `json:"wc_id"`
+	AlepheeID       string `json:"alephee_id"`
+	MeliID          string `json:"meli_id"`
+	MeliPriceMargin string `json:"meli_price_margin"`
 }
 
 func handleASPriceWebhook(w http.ResponseWriter, r *http.Request) {
@@ -253,7 +220,137 @@ func handleASPriceWebhook(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func productIDFromWC(wc_id string) (string, error) {
+// handleASCountingWebhook gets the items to count of the user that saved the counting.
+// Then compares each item to the value in the location of the counting
+// Adds movements to set the stock value equal to the quantity counted by the user
+type ASCountingsWebhookPayload struct {
+	ID       string `json:"id"`
+	Datetime string `json:"datetime"`
+	User     string `json:"user"`
+	Location string `json:"location"`
+}
+
+type ASItemsToCountWebhookPayload struct {
+	ID       string `json:"product_id"`
+	Quantity string `json:"quantity"`
+	User     string `json:"user"`
+}
+
+func handleASCountingWebhook(w http.ResponseWriter, r *http.Request) {
+
+	// Ensure that the request method is POST
+	if r.Method != http.MethodPost {
+		log.Println(http.StatusMethodNotAllowed)
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Parse the incoming request body
+	var counting ASCountingsWebhookPayload
+	if err := json.NewDecoder(r.Body).Decode(&counting); err != nil {
+		log.Println("error decoding payload:", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	log.Println("counting added:", counting.ID, counting.Datetime, counting.Location, counting.User)
+
+	// Prepare the payload for finding the product ID and quantity
+	payload := fmt.Sprintf(`{
+		"Action": "Find",
+		"Properties": {
+			"Locale": "es-US",
+			"Selector": 'Filter(items_to_count, [user]="%s")',
+			"Timezone": "Argentina Standard Time",
+		},
+		"Rows": []
+	}`, counting.User)
+
+	// Create the request
+	requestURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/items_to_count/Action", os.Getenv("appsheet_id"))
+	key := os.Getenv("appsheet_key")
+	req, err := http.NewRequest(http.MethodPost, requestURL, bytes.NewBufferString(payload))
+	if err != nil {
+		log.Printf("failed to create request for appsheet: %v", err)
+		return
+	}
+
+	// Set request headers
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("ApplicationAccessKey", key)
+
+	// Send the request
+	client := http.DefaultClient
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("failed to send request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Check the response status code
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("unexpected status code from appsheet: %d", resp.StatusCode)
+		return
+	}
+
+	// Read the response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("failed to read response body: %v", err)
+		return
+	}
+
+	// Unmarshal the JSON data into the struct
+	var responseData []ASItemsToCountWebhookPayload
+	err = json.Unmarshal(body, &responseData)
+	if err != nil {
+		log.Printf("failed to unmarshal response data: %v", err)
+		return
+	}
+
+	movement_type := fmt.Sprintf("Conteo %s", counting.ID)
+
+	for _, item := range responseData {
+		stock_value, err := getProductStock(item.ID, counting.Location)
+		if err != nil {
+			log.Printf("error getting product stock: %v", err)
+			return
+		}
+
+		if stock_value == item.Quantity {
+			continue
+		}
+
+		old, err := strconv.Atoi(stock_value)
+		if err != nil {
+			log.Printf("error parsing stock quantity to int: %v", err)
+			return
+		}
+		new, err := strconv.Atoi(item.Quantity)
+		if err != nil {
+			log.Printf("error parsing stock quantity to int: %v", err)
+			return
+		}
+		quantity := new - old
+		quantitystr := convertToString(quantity)
+
+		if counting.Location == "Fábrica" {
+			addMovement(item.ID, quantitystr, "0", "0", "0", movement_type)
+		} else if counting.Location == "Orán" {
+			addMovement(item.ID, "0", quantitystr, "0", "0", movement_type)
+		} else if counting.Location == "Rodriguez" {
+			addMovement(item.ID, "0", "0", quantitystr, "0", movement_type)
+		} else if counting.Location == "Marcos Paz" {
+			addMovement(item.ID, "0", "0", "0", quantitystr, movement_type)
+		} else {
+			log.Println("movement not added")
+		}
+
+	}
+}
+
+// productIDFromWCID lookups the id of a product based on the wc id
+func productIDFromWCID(wc_id string) (string, error) {
 
 	// Define the data struct for the response
 	type ResponseData struct {
@@ -321,7 +418,8 @@ func productIDFromWC(wc_id string) (string, error) {
 	return "", errors.New("product searched correctly but not found in database")
 }
 
-func addMovement(product_id string, fabrica string, oran string, rodriguez string, marcos_paz string, platform string) (string, error) {
+// Adds a movement in appsheet with the product_id, stock in each location, and movement_type
+func addMovement(product_id string, fabrica string, oran string, rodriguez string, marcos_paz string, movement_type string) (string, error) {
 
 	payload := fmt.Sprintf(`
 	{
@@ -340,7 +438,7 @@ func addMovement(product_id string, fabrica string, oran string, rodriguez strin
 				"movement_type": "%s"
 			}
 		]
-	}`, product_id, fabrica, oran, rodriguez, marcos_paz, platform)
+	}`, product_id, fabrica, oran, rodriguez, marcos_paz, movement_type)
 	// Create the request
 	requestURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/MOVEMENTS/Action", os.Getenv("appsheet_id"))
 	req, err := http.NewRequest(http.MethodPost, requestURL, bytes.NewBufferString(payload))
@@ -368,6 +466,16 @@ func addMovement(product_id string, fabrica string, oran string, rodriguez strin
 	return convertToString(resp.StatusCode), nil
 }
 
+type stockData struct {
+	Oran      string `json:"oran"`
+	Rodriguez string `json:"rodriguez"`
+	Fabrica   string `json:"fabrica"`
+	MarcosPaz string `json:"marcos_paz"`
+	Total     string `json:"total_stock"`
+	Product   string `json:"product_id"`
+}
+
+// Returns the stock of the product in the location specified
 func getProductStock(product_id string, location string) (string, error) {
 
 	stockgetURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/STOCK/Action", os.Getenv("appsheet_id"))
@@ -441,6 +549,15 @@ func getProductStock(product_id string, location string) (string, error) {
 
 }
 
+type PlatformsData struct {
+	Product     string `json:"product_id"`
+	WCID        string `json:"wc_id"`
+	MeliID      string `json:"meli_id"`
+	AlepheeID   string `json:"alephee_id"`
+	StockMargin string `json:"stock_margin"`
+}
+
+// Returns the StockMargin, AlepheeID, MeliID, WCID based on a product_id
 func getPlatformsID(product_id string) (string, string, string, string, string) {
 
 	stockgetURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/PLATFORMS/Action", os.Getenv("appsheet_id"))
@@ -496,63 +613,8 @@ func getPlatformsID(product_id string) (string, string, string, string, string) 
 
 }
 
-func updateWC(wc_id string, field string, value interface{}) string {
-
-	wcURL := fmt.Sprintf("https://www.energiaglobal.com.ar/wp-json/wc/v3/products/%s", fmt.Sprint(wc_id))
-	wcPayload := fmt.Sprintf(`{"%s": %s}`, fmt.Sprint(field), fmt.Sprint(value))
-
-	req, err := http.NewRequest(http.MethodPut, wcURL, bytes.NewBufferString(wcPayload))
-	if err != nil {
-		return "error creating request for WooCommerce:" + fmt.Sprint(err)
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	req.SetBasicAuth(os.Getenv("wc_client"), os.Getenv("wc_secret"))
-
-	client := http.DefaultClient
-	resp, err := client.Do(req)
-	if err != nil {
-		return "error updating product in WooCommerce:" + fmt.Sprint(err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "unexpected status code from WooCommerce:" + fmt.Sprint(resp.StatusCode)
-	}
-
-	return ""
-}
-
-func updateMeli(meli_id string, field string, value interface{}) string {
-
-	URL := fmt.Sprintf("https://api.mercadolibre.com/items/MLA%s", fmt.Sprint(meli_id))
-	payload := fmt.Sprintf(`{"%s": %s}`, fmt.Sprint(field), fmt.Sprint(value))
-
-	req, err := http.NewRequest(http.MethodPut, URL, bytes.NewBufferString(payload))
-	if err != nil {
-		return "error creating request for meli:" + fmt.Sprint(err)
-	}
-
-	auth := "Bearer " + os.Getenv("MELI_ACCESS_TOKEN")
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Authorization", auth)
-
-	client := http.DefaultClient
-	resp, err := client.Do(req)
-	if err != nil {
-		return "error updating product in meli:" + fmt.Sprint(err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "unexpected status code from meli:" + fmt.Sprint(resp.StatusCode)
-	}
-
-	return ""
-}
-
-func productIDFromMeli(meli_id string) (string, error) {
+// productIDFromMeliID lookups the id of a product based on the meli id
+func productIDFromMeliID(meli_id string) (string, error) {
 
 	// Define the data struct for the response
 	type ResponseData struct {
@@ -619,141 +681,4 @@ func productIDFromMeli(meli_id string) (string, error) {
 	}
 
 	return "", errors.New("product searched correctly but not found in database")
-}
-
-type ASCountingsWebhookPayload struct {
-	ID       string `json:"id"`
-	Datetime string `json:"datetime"`
-	User     string `json:"user"`
-	Location string `json:"location"`
-}
-
-type ASItemsToCountWebhookPayload struct {
-	ID       string `json:"product_id"`
-	Quantity string `json:"quantity"`
-	User     string `json:"user"`
-}
-
-func handleASCountingWebhook(w http.ResponseWriter, r *http.Request) {
-
-	log.Println("counting added")
-
-	// Ensure that the request method is POST
-	if r.Method != http.MethodPost {
-		log.Println(http.StatusMethodNotAllowed)
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-
-	// Parse the incoming request body
-	var counting ASCountingsWebhookPayload
-	if err := json.NewDecoder(r.Body).Decode(&counting); err != nil {
-		log.Println("error decoding payload:", err)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	log.Println(counting.ID, counting.Datetime, counting.Location, counting.User)
-
-	// Prepare the payload for finding the product ID and quantity
-	payload := fmt.Sprintf(`{
-		"Action": "Find",
-		"Properties": {
-			"Locale": "es-US",
-			"Selector": 'Filter(items_to_count, [user]="%s")',
-			"Timezone": "Argentina Standard Time",
-		},
-		"Rows": []
-	}`, counting.User)
-
-	// Create the request
-	requestURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/items_to_count/Action", os.Getenv("appsheet_id"))
-	key := os.Getenv("appsheet_key")
-	req, err := http.NewRequest(http.MethodPost, requestURL, bytes.NewBufferString(payload))
-	if err != nil {
-		log.Printf("failed to create request for appsheet: %v", err)
-		return
-	}
-
-	// Set request headers
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("ApplicationAccessKey", key)
-
-	// Send the request
-	client := http.DefaultClient
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Printf("failed to send request: %v", err)
-	}
-	defer resp.Body.Close()
-
-	log.Printf("request sent to appsheet")
-
-	// Check the response status code
-	if resp.StatusCode != http.StatusOK {
-		log.Printf("unexpected status code from appsheet: %d", resp.StatusCode)
-		return
-	}
-
-	log.Printf("request returned correctly")
-
-	// Read the response body
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Printf("failed to read response body: %v", err)
-		return
-	}
-
-	// Unmarshal the JSON data into the struct
-	var responseData []ASItemsToCountWebhookPayload
-	err = json.Unmarshal(body, &responseData)
-	if err != nil {
-		log.Printf("failed to unmarshal response data: %v", err)
-		return
-	}
-
-	movement_type := fmt.Sprintf("Conteo %s", counting.ID)
-
-	for _, item := range responseData {
-		stock_value, err := getProductStock(item.ID, counting.Location)
-		if err != nil {
-			log.Printf("error getting product stock: %v", err)
-			return
-		}
-
-		if stock_value == item.Quantity {
-			continue
-		}
-
-		old, err := strconv.Atoi(stock_value)
-		if err != nil {
-			log.Printf("error parsing stock quantity to int: %v", err)
-			return
-		}
-		new, err := strconv.Atoi(item.Quantity)
-		if err != nil {
-			log.Printf("error parsing stock quantity to int: %v", err)
-			return
-		}
-		quantity := new - old
-		quantitystr := convertToString(quantity)
-
-		if counting.Location == "Fábrica" {
-			addMovement(item.ID, quantitystr, "0", "0", "0", movement_type)
-			log.Println("movement added")
-		} else if counting.Location == "Orán" {
-			addMovement(item.ID, "0", quantitystr, "0", "0", movement_type)
-			log.Println("movement added")
-		} else if counting.Location == "Rodriguez" {
-			addMovement(item.ID, "0", "0", quantitystr, "0", movement_type)
-			log.Println("movement added")
-		} else if counting.Location == "Marcos Paz" {
-			addMovement(item.ID, "0", "0", "0", quantitystr, movement_type)
-			log.Println("movement added")
-		} else {
-			log.Println("movement not added")
-		}
-
-	}
-
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -32,6 +33,9 @@ type MeliItem struct {
 	Quantity int
 }
 
+// handleMeliWebhook process an order notification from meli.
+// Receives the order id, then requests the data of that order to get the items and quantities
+// For each item, adds a movement in appsheet to substract the sold quantity
 func handleMeliWebhook(w http.ResponseWriter, r *http.Request) {
 
 	// Ensure that the request method is POST
@@ -137,15 +141,15 @@ func handleMeliWebhook(w http.ResponseWriter, r *http.Request) {
 		//trim the 'MLA' part
 		item.MeliID = strings.TrimPrefix(item.MeliID, "MLA")
 
-		product_id, err := productIDFromMeli(item.MeliID)
+		product_id, err := productIDFromMeliID(item.MeliID)
 		if err != nil {
 			log.Println("error finding meli code in database:", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		log.Printf("product_id: %s", product_id)
-		log.Println("quantity:", item.Quantity)
+		log.Println("product_id:", product_id, "quantity:", item.Quantity)
+		//log.Println("quantity:", item.Quantity)
 
 		_, err = addMovement(product_id, "0", convertToString(-item.Quantity), "0", "0", "Mercado Libre")
 		if err != nil {
@@ -164,4 +168,34 @@ func handleMeliWebhook(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("webhook processed successfully"))
 	log.Println("meli notification processed")
 
+}
+
+// Updates meli a publication value (stock or price)
+func updateMeli(meli_id string, field string, value interface{}) string {
+
+	URL := fmt.Sprintf("https://api.mercadolibre.com/items/MLA%s", fmt.Sprint(meli_id))
+	payload := fmt.Sprintf(`{"%s": %s}`, fmt.Sprint(field), fmt.Sprint(value))
+
+	req, err := http.NewRequest(http.MethodPut, URL, bytes.NewBufferString(payload))
+	if err != nil {
+		return "error creating request for meli:" + fmt.Sprint(err)
+	}
+
+	auth := "Bearer " + os.Getenv("MELI_ACCESS_TOKEN")
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Authorization", auth)
+
+	client := http.DefaultClient
+	resp, err := client.Do(req)
+	if err != nil {
+		return "error updating product in meli:" + fmt.Sprint(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "unexpected status code from meli:" + fmt.Sprint(resp.StatusCode)
+	}
+
+	return ""
 }

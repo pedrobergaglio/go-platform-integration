@@ -1,25 +1,16 @@
 package main
 
 import (
-	//"bytes"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
-	//"time"
-)
 
-func convertToString(value interface{}) string {
-	switch v := value.(type) {
-	case string:
-		return v
-	case int, int64, float32, float64:
-		return fmt.Sprintf("%v", v)
-	default:
-		return ""
-	}
-}
+	//"time"
+	"os"
+)
 
 type WCItem struct {
 	ProductID string
@@ -33,6 +24,8 @@ type WCWebhookPayload struct {
 	} `json:"line_items"`
 }
 
+// Process an order notification from woocommerce
+// For each item in the order, adds a movement in appsheet to substract the quantity sold
 func handleWCWebhook(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("received wc order notification")
@@ -62,28 +55,27 @@ func handleWCWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create a slice to store the items
-	var items []MeliItem
+	var items []WCItem
 
 	// Iterate over the line_items and save the product_id and quantity
 	for _, lineItem := range payload.LineItems {
-		item := MeliItem{
-			MeliID:   convertToString(lineItem.ProductID),
-			Quantity: lineItem.Quantity,
+		item := WCItem{
+			ProductID: convertToString(lineItem.ProductID),
+			Quantity:  lineItem.Quantity,
 		}
 		items = append(items, item)
 	}
 
 	if len(items) == 0 {
 		log.Println("no items received in notification")
+		return
 	}
 	// Process the webhook request or perform any desired actions using the items slice
 
 	// Print the items
 	for _, item := range items {
-		log.Println("wc_id:", item.MeliID)
-		log.Println("quantity:", item.Quantity)
 
-		product_id, err := productIDFromWC(item.MeliID)
+		product_id, err := productIDFromWCID(item.ProductID)
 		if err != nil {
 			log.Println("error finding product in database:", err)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -106,4 +98,32 @@ func handleWCWebhook(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("webhook processed successfully"))
 	log.Println("woocommerce notification processed")
+}
+
+// Updates a wc product property
+func updateWC(wc_id string, field string, value interface{}) string {
+
+	wcURL := fmt.Sprintf("https://www.energiaglobal.com.ar/wp-json/wc/v3/products/%s", fmt.Sprint(wc_id))
+	wcPayload := fmt.Sprintf(`{"%s": %s}`, fmt.Sprint(field), fmt.Sprint(value))
+
+	req, err := http.NewRequest(http.MethodPut, wcURL, bytes.NewBufferString(wcPayload))
+	if err != nil {
+		return "error creating request for WooCommerce:" + fmt.Sprint(err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.SetBasicAuth(os.Getenv("wc_client"), os.Getenv("wc_secret"))
+
+	client := http.DefaultClient
+	resp, err := client.Do(req)
+	if err != nil {
+		return "error updating product in WooCommerce:" + fmt.Sprint(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "unexpected status code from WooCommerce:" + fmt.Sprint(resp.StatusCode)
+	}
+
+	return ""
 }

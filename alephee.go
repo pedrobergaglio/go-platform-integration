@@ -21,6 +21,8 @@ type ResultItems struct {
 	ItemPrice interface{} `json:"price"`
 }
 
+// updateRumboPricesAlephee gets all the products in appsheet linked to alephee
+// For each product, gets the price in alephee, and then updates it in appsheet.
 func updateRumboPricesAlephee() {
 
 	log.Println("updating rumbo prices")
@@ -251,6 +253,7 @@ https://api.alephcrm.com/v2/products?API_KEY=8F509A97-B5C8-4B9E-8148-07C055C54C0
   ]
 */
 
+// Updates the stock of an alephee publication
 func updateAlephee(alephee_id string, stock interface{}) string {
 
 	URL := fmt.Sprintf("https://api.alephcrm.com/v2/products?API_KEY=%s&accountId=%s", os.Getenv("alephee_api_key"), os.Getenv("alephee_account_id"))
