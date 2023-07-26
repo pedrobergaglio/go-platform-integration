@@ -217,7 +217,7 @@ func handleASPriceWebhook(w http.ResponseWriter, r *http.Request) {
 			}
 
 			//calculate the margin
-			percent_margin := (1 + margin/100)
+			percent_margin := (1.0 + float64(margin)/100.00)
 			log.Println(margin)
 			log.Println(percent_margin)
 			meli_price := sale_price * float64(percent_margin)
