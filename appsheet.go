@@ -95,7 +95,7 @@ func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 
 	// Update the MELI product
 	if meli_id != "0" {
-		if alephee_id == "0" {
+		if alephee_id == "0000000" {
 			//if meli_id != "0" {
 			error = updateMeli(meli_id, "available_quantity", stock_minus_margin)
 			if error != "" {
@@ -108,7 +108,7 @@ func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update the ALEPHEE product
-	if alephee_id != "0" {
+	if alephee_id != "0000000" {
 		error = updateAlephee(alephee_id, stock_minus_margin)
 		if error != "" {
 			log.Println("error updating stock in alephee:", error)
@@ -167,6 +167,12 @@ func handleASPriceWebhook(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+
+	//set it to len=7
+	for len(payload.AlepheeID) < 7 {
+		payload.AlepheeID = "0" + payload.AlepheeID
+	}
+
 	// Log the received payload
 	log.Println("notification for updated price received:", convertToString(payload.SalePrice))
 
@@ -611,6 +617,10 @@ func getPlatformsID(product_id string) (string, string, string, string, string) 
 	for _, item := range PlatformData {
 		if item.Product == product_id {
 			if item.WCID != "0" || item.MeliID != "0" {
+				//set it to len=7
+				for len(item.AlepheeID) < 7 {
+					item.AlepheeID = "0" + item.AlepheeID
+				}
 				return item.StockMargin, item.AlepheeID, item.MeliID, item.WCID, ""
 			}
 			return "", "", "", "", "product not linked to any platform"
