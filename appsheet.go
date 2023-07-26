@@ -218,16 +218,14 @@ func handleASPriceWebhook(w http.ResponseWriter, r *http.Request) {
 
 			//calculate the margin
 			percent_margin := (1.0 + float64(margin)/100.00)
-			log.Println(margin)
-			log.Println(percent_margin)
 			meli_price := sale_price * float64(percent_margin)
-			log.Println(meli_price)
 
 			//set the last digit to 0
-			string_meli_price := convertToString(meli_price)
+			string_meli_price := convertToString(int(meli_price))
 			length := len(string_meli_price)
+			string_meli_price = string_meli_price[:length-1] + "0"
 
-			errr := updateMeli(convertToString(payload.MeliID), "price", string_meli_price[:length-1]+"0")
+			errr := updateMeli(convertToString(payload.MeliID), "price", string_meli_price)
 			if errr != "" {
 				log.Println("error updating meli price:", errr)
 				flag = 1
