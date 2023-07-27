@@ -80,8 +80,7 @@ func refreshMeliToken() error {
 		return err
 	}
 
-	//fmt.Println("new refresh token:", tokenResponse.RefreshToken)
-	//fmt.Println("new access token:", tokenResponse.AccessToken)
+	fmt.Println("meli refresh token:", tokenResponse.RefreshToken, "meli access token:", tokenResponse.AccessToken)
 
 	return nil
 }
