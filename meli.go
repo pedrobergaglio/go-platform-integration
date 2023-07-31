@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 )
 
 type Notification struct {
@@ -95,6 +96,60 @@ func handleMeliWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != 403 {
+		log.Println("meli error 403. retrying.")
+		time.Sleep(time.Minute)
+
+		URL := fmt.Sprintf("https://api.mercadolibre.com%s", notification.OrderIDLink)
+
+		req, err := http.NewRequest(http.MethodGet, URL, nil)
+		if err != nil {
+			log.Println("failed to create request:", err)
+			return
+		}
+
+		auth := "Bearer " + os.Getenv("MELI_ACCESS_TOKEN")
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Accept", "application/json")
+		req.Header.Set("Authorization", auth)
+
+		client := http.DefaultClient
+		resp, err := client.Do(req)
+		if err != nil {
+			log.Println("error getting order data:", err)
+			return
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != 403 {
+			log.Println("meli error 403. retrying.")
+			time.Sleep(time.Minute)
+
+			URL := fmt.Sprintf("https://api.mercadolibre.com%s", notification.OrderIDLink)
+
+			req, err := http.NewRequest(http.MethodGet, URL, nil)
+			if err != nil {
+				log.Println("failed to create request:", err)
+				return
+			}
+
+			auth := "Bearer " + os.Getenv("MELI_ACCESS_TOKEN")
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Accept", "application/json")
+			req.Header.Set("Authorization", auth)
+
+			client := http.DefaultClient
+			resp, err := client.Do(req)
+			if err != nil {
+				log.Println("error getting order data:", err)
+				return
+			}
+			defer resp.Body.Close()
+
+		}
+
+	}
+
 	if resp.StatusCode != http.StatusOK {
 		log.Println("unexpected status code from meli while getting order data:" + fmt.Sprint(resp.StatusCode))
 		return
@@ -173,29 +228,46 @@ func handleMeliWebhook(w http.ResponseWriter, r *http.Request) {
 // Updates meli a publication value (stock or price)
 func updateMeli(meli_id string, field string, value interface{}) string {
 
-	URL := fmt.Sprintf("https://api.mercadolibre.com/items/MLA%s", fmt.Sprint(meli_id))
-	payload := fmt.Sprintf(`{"%s": %s}`, fmt.Sprint(field), fmt.Sprint(value))
+	// Retry for a maximum of 3 times
+	maxRetries := 3
+	retries := 0
 
-	req, err := http.NewRequest(http.MethodPut, URL, bytes.NewBufferString(payload))
-	if err != nil {
-		return "error creating request for meli:" + fmt.Sprint(err)
+	for {
+
+		URL := fmt.Sprintf("https://api.mercadolibre.com/items/MLA%s", fmt.Sprint(meli_id))
+		payload := fmt.Sprintf(`{"%s": %s}`, fmt.Sprint(field), fmt.Sprint(value))
+
+		req, err := http.NewRequest(http.MethodPut, URL, bytes.NewBufferString(payload))
+		if err != nil {
+			return "error creating request for meli:" + fmt.Sprint(err)
+		}
+
+		auth := "Bearer " + os.Getenv("MELI_ACCESS_TOKEN")
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Accept", "application/json")
+		req.Header.Set("Authorization", auth)
+
+		client := http.DefaultClient
+		resp, err := client.Do(req)
+		if err != nil {
+			return "error updating product in meli:" + fmt.Sprint(err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode == http.StatusOK {
+			return ""
+		} else if resp.StatusCode != 403 {
+			if retries < maxRetries {
+				log.Println("meli error 403. retrying...")
+				retries++
+				time.Sleep(time.Minute)
+			} else {
+				return "max retries reached. giving up."
+			}
+
+		} else {
+			return "unexpected status code from meli:" + fmt.Sprint(resp.StatusCode)
+		}
+
 	}
-
-	auth := "Bearer " + os.Getenv("MELI_ACCESS_TOKEN")
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Authorization", auth)
-
-	client := http.DefaultClient
-	resp, err := client.Do(req)
-	if err != nil {
-		return "error updating product in meli:" + fmt.Sprint(err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "unexpected status code from meli:" + fmt.Sprint(resp.StatusCode)
-	}
-
-	return ""
 }
