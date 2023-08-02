@@ -256,7 +256,7 @@ func updateMeli(meli_id string, field string, value interface{}) string {
 
 		if resp.StatusCode == http.StatusOK {
 			return ""
-		} else if resp.StatusCode != 403 {
+		} else if resp.StatusCode == 403 {
 			if retries < maxRetries {
 				log.Println("meli error 403. retrying...")
 				retries++
