@@ -273,7 +273,7 @@ type ASItemsToCountWebhookPayload struct {
 
 func handleASCountingWebhook(w http.ResponseWriter, r *http.Request) {
 
-	// Ensure that the request method is POST
+	// Ensure that the request method is POSTh
 	if r.Method != http.MethodPost {
 		log.Println(http.StatusMethodNotAllowed)
 		w.WriteHeader(http.StatusMethodNotAllowed)
