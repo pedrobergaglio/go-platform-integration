@@ -120,6 +120,7 @@ func main() {
 	http.HandleFunc("/price", handleASPriceWebhook)
 	http.HandleFunc("/meli", handleMeliWebhook)
 	http.HandleFunc("/countings", handleASCountingWebhook)
+	http.HandleFunc("/usd", handleASUsdWebhook)
 
 	// Root route handler
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
