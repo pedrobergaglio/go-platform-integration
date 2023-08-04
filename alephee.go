@@ -25,7 +25,7 @@ type ResultItems struct {
 // For each product, gets the price in alephee, and then updates it in appsheet.
 func updateRumboPricesAlephee() {
 
-	log.Println("updating rumbo prices")
+	log.Println("updating rumbo prices from alephee")
 
 	//for each product, get the price and update it in the app
 	//if index in a multiple of 30, sleep 1 minute

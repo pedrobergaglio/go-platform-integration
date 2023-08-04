@@ -127,3 +127,26 @@ func refreshPeriodically() {
 		time.Sleep(refreshInterval)
 	}
 }
+
+func RunAtMidnight() {
+	// Get the current time in UTC
+	now := time.Now().UTC()
+
+	// Calculate the duration until the next midnight UTC
+	nextMidnight := now.Truncate(24 * time.Hour).Add(24 * time.Hour)
+	durationUntilMidnight := nextMidnight.Sub(now)
+
+	// Start a goroutine that runs the scheduled function at the next midnight
+	go func() {
+		time.Sleep(durationUntilMidnight)
+		updateRumboPricesAlephee()
+
+		// Set up a ticker to run the function every 24 hours (starting at the next midnight)
+		ticker := time.NewTicker(24 * time.Hour)
+		defer ticker.Stop()
+		// Schedule the daily task to run again every 24 hours
+		for range time.Tick(24 * time.Hour) {
+			updateRumboPricesAlephee()
+		}
+	}()
+}

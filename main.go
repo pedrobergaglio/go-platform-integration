@@ -109,7 +109,8 @@ func convertToString(value interface{}) string {
 func main() {
 
 	loadConfig()
-	checkStock()
+	RunAtMidnight()
+	updateRumboPricesAlephee()
 
 	// Start a background goroutine to periodically refresh prices and tokens
 	go refreshPeriodically()
