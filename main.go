@@ -110,7 +110,6 @@ func main() {
 
 	loadConfig()
 	RunAtMidnight()
-	updateRumboPricesAlephee()
 
 	// Start a background goroutine to periodically refresh prices and tokens
 	go refreshPeriodically()

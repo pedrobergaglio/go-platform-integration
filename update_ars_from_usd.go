@@ -109,7 +109,7 @@ func handleASUsdWebhook(w http.ResponseWriter, r *http.Request) {
 			"Locale": "es-US",
 			"Timezone": "Argentina Standard Time"
 		},
-		"Rows": `
+		"Rows": [`
 
 	if len(ProductPrices) == 0 {
 		log.Printf("error: no products for that supplier")
@@ -134,18 +134,18 @@ func handleASUsdWebhook(w http.ResponseWriter, r *http.Request) {
 
 			ars_price := convertToString(supplier_usd * usd_price)
 
-			payload = payload + fmt.Sprintf(`[{
+			payload = payload + fmt.Sprintf(`{
 												"product_id" : %s,
 												"sale_price_ars" : %s
 												
-												}],`, item.ProductID, ars_price)
+												},`, item.ProductID, ars_price)
 
 		}
 	}
 
 	payload = payload[:len(payload)-1]
 
-	payload = payload + "}"
+	payload = payload + "]}"
 
 	// Create the request
 	requestURL = fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/stock/Action", os.Getenv("appsheet_id"))
