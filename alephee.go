@@ -75,15 +75,11 @@ func updateRumboPricesAlephee() {
 	}
 	defer resp.Body.Close()
 
-	log.Println("send first request to appsheet")
-
 	// Check the response status code
 	if resp.StatusCode != http.StatusOK {
 		log.Printf("couldn't get products with alephee code: unexpected status code from appsheet: %d", resp.StatusCode)
 		return
 	}
-
-	log.Println("alephee products returned correctly")
 
 	// Read the response body
 	body, err := io.ReadAll(resp.Body)

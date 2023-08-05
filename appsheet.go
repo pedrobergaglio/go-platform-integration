@@ -171,13 +171,13 @@ func handleASPriceWebhook(w http.ResponseWriter, r *http.Request) {
 
 	sale_pricestr, _, _, errr := getProductStock(payload.ProductID, "")
 	if errr != nil {
-		log.Printf("error getting platforms product data: %s", err)
+		log.Printf("error getting platforms product data: %v", errr)
 		return
 	}
 
 	sale_price, errr := strconv.ParseFloat(sale_pricestr, 64)
 	if errr != nil {
-		log.Printf("error parsing sale price to float: %v", err)
+		log.Printf("error parsing sale price to float: %v", errr)
 		return
 	}
 
@@ -640,13 +640,13 @@ func getPlatformsID(product_id string) ([]PlatformsData, string) {
 
 	for _, item := range PlatformData {
 		if item.ProductID == product_id {
-			if item.Platform == "Alephee" {
+			if item.Platform == "ALEPHEE" {
 				//set it to len=7
 
 				// Convert the total_stock value to an integer
 				alephee_id_int, err := strconv.Atoi(item.PlatformID)
 				if err != nil {
-					return ProductPlatformsData, fmt.Sprintln("error converting total_stock to int:", err)
+					return ProductPlatformsData, fmt.Sprintln("error converting publication id to int:", err)
 				}
 				// Format the total_stock with leading zeros (7 characters)
 				item.PlatformID = fmt.Sprintf("%07d", alephee_id_int)
