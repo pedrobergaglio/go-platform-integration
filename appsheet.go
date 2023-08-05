@@ -169,8 +169,6 @@ func handleASPriceWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Print(getProductStock(payload.ProductID, ""))
-
 	sale_pricestr, _, _, errr := getProductStock(payload.ProductID, "")
 	if errr != nil {
 		log.Printf("error getting platforms product data: %v", errr)
@@ -495,7 +493,7 @@ type stockData struct {
 	Product     string `json:"product_id"`
 	StockScope  string `json:"stock_scope"`
 	StockMargin string `json:"stock_margin"`
-	SalePrice   string `json:"sale_price"`
+	SalePrice   string `json:"sale_price_ars"`
 }
 
 // Returns the stock of the product in the location specified
