@@ -169,6 +169,8 @@ func handleASPriceWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Print(getProductStock(payload.ProductID, ""))
+
 	sale_pricestr, _, _, errr := getProductStock(payload.ProductID, "")
 	if errr != nil {
 		log.Printf("error getting platforms product data: %v", errr)
@@ -497,7 +499,7 @@ type stockData struct {
 }
 
 // Returns the stock of the product in the location specified
-func getProductStock(product_id string, location string) (sale_price string, stock_margin string, stock string, err error) {
+func getProductStock(product_id string, location string) (sale_price, stock_margin, stock string, err error) {
 
 	stockgetURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/STOCK/Action", os.Getenv("appsheet_id"))
 	find_in_stock := `{
