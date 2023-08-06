@@ -98,7 +98,7 @@ func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 
 		// Update the MELI product
 		if item.Platform == "MELI" {
-			//if meli_id != "0" {
+
 			error = updateMeli(item.PlatformID, "available_quantity", stock_minus_margin)
 			if error != "" {
 				log.Println("error updating stock in meli:", error)
@@ -138,14 +138,6 @@ func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 // handleASPriceWebhook receives a product data with a price value that has been modified
 // Then the function calculates the configured price margin for meli,
 // and updates the prices in the online platforms for that specific product
-type ASPriceWebhookPayload struct {
-	ProductID       string `json:"product_id"`
-	SalePrice       string `json:"sale_price"`
-	WCID            string `json:"wc_id"`
-	AlepheeID       string `json:"alephee_id"`
-	MeliID          string `json:"meli_id"`
-	MeliPriceMargin string `json:"meli_price_margin"`
-}
 
 func handleASPriceWebhook(w http.ResponseWriter, r *http.Request) {
 	// Ensure that the request method is POST
@@ -367,75 +359,6 @@ func handleASCountingWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// productIDFromWCID lookups the id of a product based on the wc id
-func productIDFromWCID(wc_id string) (string, error) {
-
-	// Define the data struct for the response
-	type ResponseData struct {
-		AppsheetProductID string `json:"product_id"`
-		AppsheetWCID      string `json:"wc_id"`
-	}
-
-	// Prepare the payload for finding the product ID and quantity
-	payload := `{
-			"Action": "Find",
-			"Properties": {
-				"Locale": "es-US",
-				"Selector": "Filter(PLATFORMS, ISNOTBANK([wc_id]))"
-				"Timezone": "Argentina Standard Time",
-			},
-			"Rows": []
-		}`
-
-	//"Selector": "Filter("PLATFORMS", ISNOTBLANK([wc_id]))",
-
-	// Create the request
-	requestURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/PLATFORMS/Action", os.Getenv("appsheet_id"))
-	key := os.Getenv("appsheet_key")
-	req, err := http.NewRequest(http.MethodPost, requestURL, bytes.NewBufferString(payload))
-	if err != nil {
-		return "", fmt.Errorf("failed to create request: %v", err)
-	}
-
-	// Set request headers
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("ApplicationAccessKey", key)
-
-	// Send the request
-	client := http.DefaultClient
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("failed to send request: %v", err)
-	}
-	defer resp.Body.Close()
-
-	// Check the response status code
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-	}
-
-	// Read the response body
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("failed to read response body: %v", err)
-	}
-
-	// Unmarshal the JSON data into the struct
-	var responseData []ResponseData
-	err = json.Unmarshal(body, &responseData)
-	if err != nil {
-		return "", fmt.Errorf("failed to unmarshal response data: %v", err)
-	}
-
-	for _, item := range responseData {
-		if item.AppsheetWCID == wc_id {
-			return item.AppsheetProductID, nil
-		}
-	}
-
-	return "", errors.New("product searched correctly but not found in database")
-}
-
 // Adds a movement in appsheet with the product_id, stock in each location, and movement_type
 func addMovement(product_id string, fabrica string, oran string, rodriguez string, marcos_paz string, movement_type string) (string, error) {
 
@@ -615,7 +538,7 @@ func getPlatformsID(product_id string) ([]PlatformsData, string) {
 	// Get product data
 	appsresp, err := client.Do(get)
 	if err != nil {
-		return ProductPlatformsData, fmt.Sprintf("error geting product in Appsheet: %s", err)
+		return ProductPlatformsData, fmt.Sprintf("error getting product in Appsheet: %s", err)
 	}
 	defer appsresp.Body.Close()
 
@@ -663,74 +586,4 @@ func getPlatformsID(product_id string) ([]PlatformsData, string) {
 
 	return ProductPlatformsData, ""
 
-}
-
-// productIDFromMeliID lookups the id of a product based on the meli id
-func productIDFromMeliID(meli_id string) (string, error) {
-
-	// Define the data struct for the response
-	type ResponseData struct {
-		AppsheetProductID string `json:"product_id"`
-		AppsheetMeliID    string `json:"meli_id"`
-	}
-
-	// Prepare the payload for finding the product ID and quantity
-	payload := `{
-			"Action": "Find",
-			"Properties": {
-				"Locale": "es-US",
-				"Selector": "Filter(PLATFORMS, ISNOTBANK([meli_id]))"
-				"Timezone": "Argentina Standard Time",
-			},
-			"Rows": []
-		}`
-
-	//"Selector": "Filter("PLATFORMS", ISNOTBLANK([wc_id]))",
-
-	// Create the request
-	requestURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/PLATFORMS/Action", os.Getenv("appsheet_id"))
-
-	req, err := http.NewRequest(http.MethodPost, requestURL, bytes.NewBufferString(payload))
-	if err != nil {
-		return "", fmt.Errorf("failed to create request: %v", err)
-	}
-
-	// Set request headers
-	key := os.Getenv("appsheet_key")
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("ApplicationAccessKey", key)
-
-	// Send the request
-	client := http.DefaultClient
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("failed to send request: %v", err)
-	}
-	defer resp.Body.Close()
-
-	// Check the response status code
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-	}
-
-	// Read the response body
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("failed to read response body: %v", err)
-	}
-
-	// Unmarshal the JSON data into the struct
-	var responseData []ResponseData
-	err = json.Unmarshal(body, &responseData)
-	if err != nil {
-		return "", fmt.Errorf("failed to unmarshal response data: %v", err)
-	}
-
-	for _, item := range responseData {
-		if item.AppsheetMeliID == meli_id {
-			return item.AppsheetProductID, nil
-		}
-	}
-
-	return "", errors.New("product searched correctly but not found in database")
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -270,4 +271,72 @@ func updateMeli(meli_id string, field string, value interface{}) string {
 		}
 
 	}
+}
+
+// productIDFromMeliID lookups the id of a product based on the meli id
+func productIDFromMeliID(meli_id string) (string, error) {
+
+	// Define the data struct for the response
+	type ResponseData struct {
+		AppsheetProductID string `json:"product_id"`
+		AppsheetMeliID    string `json:"platform_id"`
+	}
+
+	// Prepare the payload for finding the product ID and quantity
+	payload := `{
+			"Action": "Find",
+			"Properties": {
+				"Locale": "es-US",
+				"Selector": 'Filter(PLATFORMS, [platform]="MELI)'
+				"Timezone": "Argentina Standard Time",
+			},
+			"Rows": []
+		}`
+
+	// Create the request
+	requestURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/PLATFORMS/Action", os.Getenv("appsheet_id"))
+
+	req, err := http.NewRequest(http.MethodPost, requestURL, bytes.NewBufferString(payload))
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %v", err)
+	}
+
+	// Set request headers
+	key := os.Getenv("appsheet_key")
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("ApplicationAccessKey", key)
+
+	// Send the request
+	client := http.DefaultClient
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to send request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Check the response status code
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	// Read the response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read response body: %v", err)
+	}
+
+	// Unmarshal the JSON data into the struct
+	var responseData []ResponseData
+	err = json.Unmarshal(body, &responseData)
+	if err != nil {
+		return "", fmt.Errorf("failed to unmarshal response data: %v", err)
+	}
+
+	for _, item := range responseData {
+		if item.AppsheetMeliID == meli_id {
+			return item.AppsheetProductID, nil
+		}
+	}
+
+	return "", errors.New("product searched correctly but not found in database")
 }

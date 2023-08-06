@@ -35,7 +35,7 @@ func updateRumboPricesAlephee() {
 	// Define the data struct for the response
 	type ResponseData struct {
 		ID        string `json:"product_id"`
-		AlepheeID string `json:"alephee_id"`
+		AlepheeID string `json:"platform_id"`
 	}
 
 	//*******************************
@@ -47,7 +47,7 @@ func updateRumboPricesAlephee() {
 		"Action": "Find",
 		"Properties": {
 			"Locale": "es-US",
-			"Selector": "Filter(PLATFORMS, [alephee_id]<>0)",
+			"Selector": 'Filter(PLATFORMS, [platform]="ALEPHEE")',
 			"Timezone": "Argentina Standard Time"
 		},
 		"Rows": []
