@@ -390,14 +390,16 @@ func addNewDate() {
 	// Connect to the MySQL database
 	db, err := sql.Open("mysql", "megared_pedro:Engsu_23@tcp(Mysql4.gohsphere.com)/megared_energiaglobal_23?charset=utf8")
 	if err != nil {
-		log.Fatal("error connecting to the database:", err)
+		log.Println("error connecting to the database:", err)
+		return
 	}
 	defer db.Close()
 
 	// Execute the query
 	rows, err := db.Query("INSERT INTO DATES (date) VALUES (CURDATE())")
 	if err != nil {
-		log.Fatal("error executing query:", err)
+		log.Println("error executing query:", err)
+		return
 	} else {
 		rows.Close()
 	}
@@ -410,8 +412,6 @@ func refreshPeriodically() {
 	refreshInterval := time.Hour * 5 // Refresh the token every hour (adjust as needed)
 
 	for {
-		//updateRumboPricesAlephee()
-		checkStock()
 		err := refreshMeliToken()
 		if err != nil {
 			log.Println("retrying. there was an error refreshing the meli token:", err)
@@ -438,7 +438,9 @@ func RunAtTime() {
 	go func() {
 		time.Sleep(durationUntilMidnight)
 		updateRumboPricesAlephee()
+		checkStock()
 		addNewDate()
+		//updateRumboPricesAlephee()
 
 		// Set up a ticker to run the function every 24 hours (starting at the next midnight)
 		ticker := time.NewTicker(24 * time.Hour)
@@ -447,6 +449,8 @@ func RunAtTime() {
 		for range ticker.C {
 			updateRumboPricesAlephee()
 			addNewDate()
+			checkStock()
+			//updateRumboPricesAlephee()
 		}
 	}()
 
