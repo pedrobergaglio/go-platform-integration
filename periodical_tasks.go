@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -10,10 +11,12 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/chromedp/chromedp"
 	_ "github.com/go-sql-driver/mysql"
 )
 
@@ -110,8 +113,13 @@ func checkStock() {
 
 }
 
-// Scrapes and updates the value of the dollar from BNA
-func scrapeBnaDollar() {
+// Scrapes and updates the value of the dollar from BNA, Rumbo, Munditol
+func updateUsdPrices() {
+
+	loadConfig()
+
+	log.Print("updating usd prices")
+
 	// Send a GET request to the URL
 	resp, err := http.Get("https://www.bna.com.ar/Personas")
 	if err != nil {
@@ -127,12 +135,252 @@ func scrapeBnaDollar() {
 
 	// Find the element using the CSS selector
 	selector := "#billetes > table > tbody > tr:nth-child(1) > td:nth-child(3)"
-	value := doc.Find(selector).Text()
+	scraped_bna := doc.Find(selector).Text()
 
 	// Clean up the extracted value
-	value = strings.TrimSpace(value)
+	scraped_bna = strings.TrimSpace(scraped_bna)
 
-	fmt.Println("Value:", value)
+	// Replace ',' with '.'
+	scraped_bna = strings.Replace(scraped_bna, ",", ".", -1)
+
+	// Parse string to float64
+	dollar, err := strconv.ParseFloat(scraped_bna, 64)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+
+	scraped_bna = convertToString(dollar)
+
+	scraped_rumbo := getRumboUsd()
+	scraped_munditol := getMunditolUsd()
+
+	payload := fmt.Sprintf(`
+		{
+			"Action": "Edit",
+			"Properties": {
+				"Locale": "es-US",
+				"Timezone": "Argentina Standard Time"
+			},
+			"Rows": [
+				{
+					"supplier": "HONDA",
+					"supplier_usd": %s
+				},
+				{
+					"supplier": "MEGA RED",
+					"supplier_usd": %s
+				},
+				{
+					"supplier": "ENERGÍA GLOBAL",
+					"supplier_usd": %s
+				},
+				{
+					"supplier": "RUMBO",
+					"supplier_usd": %s
+				},
+				{
+					"supplier": "MUNDITOL",
+					"supplier_usd": %s
+				}
+			]
+		}`, scraped_bna, scraped_bna, scraped_bna, scraped_rumbo, scraped_munditol)
+	log.Print(payload)
+	// Create the request
+	requestURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/suppliers/Action", os.Getenv("appsheet_id"))
+	req, err := http.NewRequest(http.MethodPost, requestURL, bytes.NewBufferString(payload))
+	if err != nil {
+		log.Printf("failed to create request: %v", err)
+		return
+
+	}
+
+	// Set request headers
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("ApplicationAccessKey", os.Getenv("appsheet_key"))
+
+	// Send the request
+	client := http.DefaultClient
+	resp, err = client.Do(req)
+	if err != nil {
+		log.Printf("failed to send request: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Check the response status code
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("unexpected status code from appsheet when updating dollar price: %d", resp.StatusCode)
+		return
+	}
+
+	log.Println("finished updating dollar prices")
+
+}
+
+func getMunditolUsd() (scraped_munditol string) {
+
+	scraped_munditol = ""
+
+	// Define login credentials and URL
+	loginURL := "https://mundiextra.munditol.com/"
+	username := "nicolas.albertoni@energiaglobal.com.ar"
+	password := "energia"
+
+	// Define the CSS selectors
+	loginButtonSelector := "#homelogin > div.input_bt_box > button"
+	//closeAdButtonSelector := "#mundial_pop_box > div > div > img"
+	valueSelector := "#multiplicador_id > b"
+
+	// Create a context
+	ctx, cancel := chromedp.NewContext(context.Background())
+	defer cancel()
+
+	// Login
+	err := chromedp.Run(ctx,
+		chromedp.Navigate(loginURL),
+		chromedp.WaitVisible(loginButtonSelector),
+		chromedp.SendKeys("#login", username, chromedp.ByID),
+		chromedp.SendKeys("#passwd", password, chromedp.ByID),
+		chromedp.Click(loginButtonSelector),
+		chromedp.WaitVisible(valueSelector),
+	)
+
+	if err != nil {
+		log.Println("error munditol:", err)
+		return
+	}
+
+	err = chromedp.Run(ctx,
+		chromedp.Text(valueSelector, &scraped_munditol),
+	)
+
+	if err != nil {
+		log.Println("error munditol:", err)
+		scraped_munditol = ""
+		return
+	}
+
+	// Clean up
+	chromedp.Cancel(ctx)
+
+	// Clean up the extracted value
+	scraped_munditol = strings.TrimSpace(scraped_munditol)
+
+	// Replace ',' with '.'
+	scraped_munditol = strings.Replace(scraped_munditol, ",", ".", -1)
+
+	// Parse string to float64
+	dollar, err := strconv.ParseFloat(scraped_munditol, 64)
+	if err != nil {
+		log.Println("error munditol:", err)
+		scraped_munditol = ""
+		return
+	}
+
+	scraped_munditol = convertToString(dollar)
+	return
+}
+
+func getRumboUsd() (scraped_rumbo string) {
+
+	scraped_rumbo = ""
+
+	// Define login credentials and URL
+	loginURL := "https://distribuidores.rumbosrl.com.ar/login"
+	username := "093163"
+	accountNumber := "001"
+	password := "compras"
+
+	// Define the CSS selectors
+	usernameInputSelector := "username"
+	accountNumberInputSelector := "employee_code"
+	passwordInputSelector := "password"
+	loginButtonSelector := "submitbutton"
+
+	// Create a context
+	ctx, cancel := chromedp.NewContext(context.Background())
+	defer cancel()
+
+	// Login
+	err := chromedp.Run(ctx,
+		chromedp.Navigate(loginURL),
+		chromedp.WaitVisible("modal", chromedp.ByID),
+		chromedp.Click("#modal > div > div.cpc"),
+	)
+	if err != nil {
+		log.Println("error rumbo:", err)
+		return
+	}
+
+	// Login
+	err = chromedp.Run(ctx,
+		//chromedp.Navigate(loginURL),
+		chromedp.WaitVisible(loginButtonSelector, chromedp.ByID),
+	)
+	if err != nil {
+		log.Println("error rumbo:", err)
+		return
+	}
+
+	err = chromedp.Run(ctx,
+		chromedp.SendKeys(usernameInputSelector, username, chromedp.ByID),
+		chromedp.SendKeys(accountNumberInputSelector, accountNumber, chromedp.ByID),
+		chromedp.SendKeys(passwordInputSelector, password, chromedp.ByID),
+	)
+	if err != nil {
+		log.Println("error rumbo:", err)
+		return
+	}
+
+	err = chromedp.Run(ctx,
+		chromedp.Click(loginButtonSelector, chromedp.ByID),
+	)
+	if err != nil {
+		log.Println("error rumbo:", err)
+		return
+	}
+
+	err = chromedp.Run(ctx,
+		//chromedp.WaitVisible(closeAdButtonSelector), // Wait for the ad window to appear
+		//chromedp.Click(closeAdButtonSelector),       // Close the ad window
+		chromedp.WaitVisible("#general-info > div:nth-child(2)"),
+	)
+
+	if err != nil {
+		log.Println("error rumbo:", err)
+		return
+	}
+
+	err = chromedp.Run(ctx,
+		chromedp.Text("#general-info > div:nth-child(2) > span:nth-child(3)", &scraped_rumbo),
+	)
+
+	if err != nil {
+		log.Println("error rumbo:", err)
+		scraped_rumbo = ""
+		return
+	}
+
+	// Clean up
+	chromedp.Cancel(ctx)
+
+	// Clean up the extracted value
+	scraped_rumbo = strings.TrimSpace(scraped_rumbo)
+
+	// Replace ',' with '.'
+	scraped_rumbo = strings.Replace(scraped_rumbo, ",", ".", -1)
+
+	// Parse string to float64
+	dollar, err := strconv.ParseFloat(scraped_rumbo, 64)
+	if err != nil {
+		log.Println("error rumbo:", err)
+		scraped_rumbo = ""
+		return
+	}
+
+	scraped_rumbo = convertToString(dollar)
+	return
 }
 
 func addNewDate() {
@@ -178,7 +426,7 @@ func refreshPeriodically() {
 	}
 }
 
-func RunAtMidnight() {
+func RunAtTime() {
 	// Get the current time in UTC
 	now := time.Now().UTC()
 
@@ -186,7 +434,7 @@ func RunAtMidnight() {
 	nextMidnight := now.Truncate(24 * time.Hour).Add(24 * time.Hour)
 	durationUntilMidnight := nextMidnight.Sub(now)
 
-	// Start a goroutine that runs the scheduled function at the next midnight
+	// Start a goroutine that runs the scheduled functions
 	go func() {
 		time.Sleep(durationUntilMidnight)
 		updateRumboPricesAlephee()
@@ -196,9 +444,51 @@ func RunAtMidnight() {
 		ticker := time.NewTicker(24 * time.Hour)
 		defer ticker.Stop()
 		// Schedule the daily task to run again every 24 hours
-		for range time.Tick(24 * time.Hour) {
+		for range ticker.C {
 			updateRumboPricesAlephee()
 			addNewDate()
+		}
+	}()
+
+	// Schedule task at 11:00 UTC
+	go func() {
+		// Calculate duration until the next 11:00
+		next11AM := now.Truncate(24 * time.Hour).Add(11 * time.Hour)
+		if now.After(next11AM) {
+			next11AM = next11AM.Add(24 * time.Hour)
+		}
+		durationUntil11AM := next11AM.Sub(now)
+
+		time.Sleep(durationUntil11AM)
+
+		// Set up a ticker to run the function every 24 hours
+		ticker := time.NewTicker(24 * time.Hour)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			// Run the task you want to execute at 11:00
+			updateUsdPrices()
+		}
+	}()
+
+	// Schedule task at 15:30 UTC
+	go func() {
+		// Calculate duration until the next 15:30
+		next1530 := now.Truncate(24 * time.Hour).Add(15*time.Hour + 30*time.Minute)
+		if now.After(next1530) {
+			next1530 = next1530.Add(24 * time.Hour)
+		}
+		durationUntil1530 := next1530.Sub(now)
+
+		time.Sleep(durationUntil1530)
+
+		// Set up a ticker to run the function every 24 hours
+		ticker := time.NewTicker(24 * time.Hour)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			// Run the task you want to execute at 15:30
+			updateUsdPrices()
 		}
 	}()
 }

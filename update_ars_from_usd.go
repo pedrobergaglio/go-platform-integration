@@ -136,9 +136,10 @@ func handleASUsdWebhook(w http.ResponseWriter, r *http.Request) {
 
 			payload = payload + fmt.Sprintf(`{
 												"product_id" : %s,
-												"sale_price_ars" : %s
+												"sale_price_ars" : %s,
+												"supplier_usd" : %s
 												
-												},`, item.ProductID, ars_price)
+												},`, item.ProductID, ars_price, supplier.SupplierUSD)
 
 		}
 	}
