@@ -204,7 +204,7 @@ func updateRumboPricesAlephee() {
 			]
 		}`, item.ID, sale_price)
 		// Create the request
-		requestURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/platforms/Action", os.Getenv("appsheet_id"))
+		requestURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/stock/Action", os.Getenv("appsheet_id"))
 		req, err = http.NewRequest(http.MethodPost, requestURL, bytes.NewBufferString(payload))
 		if err != nil {
 			log.Printf("failed to create request: %v", err)

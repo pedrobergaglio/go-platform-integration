@@ -10,8 +10,10 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
+	"github.com/PuerkitoBio/goquery"
 	_ "github.com/go-sql-driver/mysql"
 )
 
@@ -89,17 +91,65 @@ func refreshMeliToken() error {
 // the stock of each product corresponds to the stored movements
 func checkStock() {
 
+	log.Print("checking stock values")
+
 	// Connect to the MySQL database
 	db, err := sql.Open("mysql", "megared_pedro:Engsu_23@tcp(Mysql4.gohsphere.com)/megared_energiaglobal_23?charset=utf8")
 	if err != nil {
-		log.Fatal("Error connecting to the database:", err)
+		log.Fatal("error connecting to the database:", err)
 	}
 	defer db.Close()
 
 	// Execute the query
 	rows, err := db.Query("CALL CHECK_STOCK()")
 	if err != nil {
-		log.Fatal("Error executing query:", err)
+		log.Fatal("error executing query:", err)
+	} else {
+		rows.Close()
+	}
+
+}
+
+// Scrapes and updates the value of the dollar from BNA
+func scrapeBnaDollar() {
+	// Send a GET request to the URL
+	resp, err := http.Get("https://www.bna.com.ar/Personas")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	// Parse the HTML document
+	doc, err := goquery.NewDocumentFromReader(resp.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Find the element using the CSS selector
+	selector := "#billetes > table > tbody > tr:nth-child(1) > td:nth-child(3)"
+	value := doc.Find(selector).Text()
+
+	// Clean up the extracted value
+	value = strings.TrimSpace(value)
+
+	fmt.Println("Value:", value)
+}
+
+func addNewDate() {
+
+	log.Print("adding new day to dates")
+
+	// Connect to the MySQL database
+	db, err := sql.Open("mysql", "megared_pedro:Engsu_23@tcp(Mysql4.gohsphere.com)/megared_energiaglobal_23?charset=utf8")
+	if err != nil {
+		log.Fatal("error connecting to the database:", err)
+	}
+	defer db.Close()
+
+	// Execute the query
+	rows, err := db.Query("INSERT INTO DATES (date) VALUES (CURDATE())")
+	if err != nil {
+		log.Fatal("error executing query:", err)
 	} else {
 		rows.Close()
 	}
@@ -140,6 +190,7 @@ func RunAtMidnight() {
 	go func() {
 		time.Sleep(durationUntilMidnight)
 		updateRumboPricesAlephee()
+		addNewDate()
 
 		// Set up a ticker to run the function every 24 hours (starting at the next midnight)
 		ticker := time.NewTicker(24 * time.Hour)
@@ -147,6 +198,7 @@ func RunAtMidnight() {
 		// Schedule the daily task to run again every 24 hours
 		for range time.Tick(24 * time.Hour) {
 			updateRumboPricesAlephee()
+			addNewDate()
 		}
 	}()
 }
