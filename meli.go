@@ -287,7 +287,7 @@ func productIDFromMeliID(meli_id string) (string, error) {
 			"Action": "Find",
 			"Properties": {
 				"Locale": "es-US",
-				"Selector": 'Filter(PLATFORMS, [platform]="MELI)'
+				"Selector": 'Filter(PLATFORMS, [platform]="MELI")'
 				"Timezone": "Argentina Standard Time",
 			},
 			"Rows": []

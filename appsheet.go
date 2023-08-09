@@ -419,7 +419,7 @@ type stockData struct {
 	SalePrice   string `json:"sale_price_ars"`
 }
 
-// Returns the stock of the product in the location specified
+// Returns the stock of the product in the location specified. If location is "" returns the corresponding scope stock.
 func getProductStock(product_id string, location string) (sale_price, stock_margin, stock string, err error) {
 
 	stockgetURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/STOCK/Action", os.Getenv("appsheet_id"))
@@ -458,7 +458,7 @@ func getProductStock(product_id string, location string) (sale_price, stock_marg
 	// Read the response body
 	body, err := io.ReadAll(appsresp.Body)
 	if err != nil {
-		log.Fatal("error reading response body:", err)
+		return "", "", "", fmt.Errorf("error reading response body: %v", err)
 	}
 
 	// Define a struct to hold the response data
@@ -467,7 +467,7 @@ func getProductStock(product_id string, location string) (sale_price, stock_marg
 	// Unmarshal the JSON data into the struct
 	err = json.Unmarshal(body, &responseData)
 	if err != nil {
-		log.Fatal("error unmarshaling response data:", err)
+		return "", "", "", fmt.Errorf("error unmarshaling response data: %v", err)
 	}
 	for _, item := range responseData {
 		if item.Product == product_id {
@@ -549,7 +549,8 @@ func getPlatformsID(product_id string) ([]PlatformsData, string) {
 	// Read the response body
 	body, err := io.ReadAll(appsresp.Body)
 	if err != nil {
-		log.Fatal("error reading response body:", err)
+		return ProductPlatformsData, fmt.Sprintln("error reading response body:", err)
+
 	}
 
 	// Define a struct to hold the response data
@@ -558,7 +559,7 @@ func getPlatformsID(product_id string) ([]PlatformsData, string) {
 	// Unmarshal the JSON data into the struct
 	err = json.Unmarshal([]byte(body), &PlatformData)
 	if err != nil {
-		log.Fatal("error unmarshaling response data:", err)
+		return ProductPlatformsData, fmt.Sprintln("error unmarshaling response data:", err)
 	}
 
 	for _, item := range PlatformData {

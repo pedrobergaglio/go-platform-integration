@@ -25,6 +25,7 @@ type ASProductPricesSuppliers struct {
 	ProductID string `json:"product_id"`
 	Supplier  string `json:"supplier"`
 	USDPrice  string `json:"sale_price_usd"`
+	USDIva    string `json:"usd_price_iva"`
 }
 
 func handleASUsdWebhook(w http.ResponseWriter, r *http.Request) {
@@ -132,13 +133,18 @@ func handleASUsdWebhook(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			ars_price := convertToString(supplier_usd * usd_price)
+			usd_iva, err := strconv.ParseFloat(item.USDIva, 64)
+			if err != nil {
+				log.Printf("error parsing string to int: %v", err)
+				return
+			}
+
+			ars_price := convertToString((supplier_usd * (usd_iva / 100)) * usd_price)
 
 			payload = payload + fmt.Sprintf(`{
 												"product_id" : %s,
 												"sale_price_ars" : %s,
 												"supplier_usd" : %s
-												
 												},`, item.ProductID, ars_price, supplier.SupplierUSD)
 
 		}
