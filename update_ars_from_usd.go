@@ -154,6 +154,8 @@ func handleASUsdWebhook(w http.ResponseWriter, r *http.Request) {
 
 	payload = payload + "]}"
 
+	fmt.Print(payload)
+
 	// Create the request
 	requestURL = fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/stock/Action", os.Getenv("appsheet_id"))
 	req, err = http.NewRequest(http.MethodPost, requestURL, bytes.NewBufferString(payload))
