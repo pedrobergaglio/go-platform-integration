@@ -139,7 +139,7 @@ func handleASUsdWebhook(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			ars_price := convertToString((supplier_usd * (usd_iva / 100)) * usd_price)
+			ars_price := convertToString((supplier_usd * (1 + usd_iva/100)) * usd_price)
 
 			payload = payload + fmt.Sprintf(`{
 												"product_id" : %s,
