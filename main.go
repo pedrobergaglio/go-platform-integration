@@ -116,9 +116,9 @@ func main() {
 
 	// Register the webhook handler functions with the default server mux
 	http.HandleFunc("/movement", handleASMovementWebhook)
-	http.HandleFunc("/woocommerce", handleWCWebhook)
 	http.HandleFunc("/price", handleASPriceWebhook)
-	http.HandleFunc("/meli", handleMeliWebhook)
+	//http.HandleFunc("/meli", handleMeliWebhook)
+	//http.HandleFunc("/woocommerce", handleWCWebhook)
 	http.HandleFunc("/countings", handleASCountingWebhook)
 	http.HandleFunc("/usd", handleASUsdWebhook)
 

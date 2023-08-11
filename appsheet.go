@@ -157,13 +157,13 @@ func handleASPriceWebhook(w http.ResponseWriter, r *http.Request) {
 
 	ProductPlatformsData, err := getPlatformsID(payload.ProductID)
 	if err != "" {
-		log.Printf("error getting platforms product data: %s", err)
+		log.Printf("getPlatformsID error getting platforms product data: %s", err)
 		return
 	}
 
 	sale_pricestr, _, _, errr := getProductStock(payload.ProductID, "")
 	if errr != nil {
-		log.Printf("error getting platforms product data: %v", errr)
+		log.Printf("getProductStock error getting platforms product data: %v", errr)
 		return
 	}
 
