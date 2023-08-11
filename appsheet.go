@@ -452,6 +452,7 @@ func getProductStock(product_id string, location string) (sale_price, stock_marg
 	defer appsresp.Body.Close()
 
 	if appsresp.StatusCode != http.StatusOK {
+		fmt.Print(find_in_stock)
 		return "", "", "", errors.New(convertToString(appsresp.StatusCode))
 	}
 
@@ -559,6 +560,8 @@ func getPlatformsID(product_id string) ([]PlatformsData, string) {
 	// Unmarshal the JSON data into the struct
 	err = json.Unmarshal([]byte(body), &PlatformData)
 	if err != nil {
+		fmt.Print(body)
+		fmt.Print(product_id)
 		return ProductPlatformsData, fmt.Sprintln("error unmarshaling response data:", err)
 	}
 
