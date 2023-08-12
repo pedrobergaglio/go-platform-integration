@@ -451,11 +451,26 @@ func getProductStock(product_id string, location string) (sale_price, stock_marg
 	}
 	defer appsresp.Body.Close()
 
+	// Retry loop for handling 500 responses
+	maxRetries := 3
+	for retry := 0; retry < maxRetries; retry++ {
+		if appsresp.StatusCode == http.StatusInternalServerError {
+			fmt.Println("received 500 response. retrying...")
+			time.Sleep(2 * time.Second) // Wait before retrying
+			appsresp, err = client.Do(get)
+			if err != nil {
+				return "", "", "", err
+			}
+		} else {
+			break // Exit the retry loop for non-500 responses
+		}
+	}
+
 	if appsresp.StatusCode != http.StatusOK {
 
-		fmt.Println("getProductStock", appsresp.StatusCode)
-		fmt.Print(product_id)
-		log.Fatal(find_in_stock)
+		//fmt.Println("getProductStock", appsresp.StatusCode)
+		//fmt.Print(product_id)
+		//log.Fatal(find_in_stock)
 		return "", "", "", errors.New(convertToString(appsresp.StatusCode))
 	}
 
