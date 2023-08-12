@@ -157,13 +157,13 @@ func handleASPriceWebhook(w http.ResponseWriter, r *http.Request) {
 
 	ProductPlatformsData, err := getPlatformsID(payload.ProductID)
 	if err != "" {
-		log.Printf("getPlatformsID error getting platforms product data: %s", err)
+		log.Printf("getPlatformsID %s error getting platforms product data: %s", payload.ProductID, err)
 		return
 	}
 
 	sale_pricestr, _, _, errr := getProductStock(payload.ProductID, "")
 	if errr != nil {
-		log.Printf("getProductStock error getting platforms product data: %v", errr)
+		log.Printf("getProductStock %s error getting platforms product data: %v", payload.ProductID, errr)
 		return
 	}
 
@@ -206,7 +206,7 @@ func handleASPriceWebhook(w http.ResponseWriter, r *http.Request) {
 
 			errr := updateMeli(convertToString(item.PlatformID), "price", string_meli_price)
 			if errr != "" {
-				log.Println("error updating meli price:", errr)
+				log.Println(item.PlatformID, "error updating meli price:", errr)
 				//flag = 1
 			}
 
@@ -214,7 +214,7 @@ func handleASPriceWebhook(w http.ResponseWriter, r *http.Request) {
 		} else if item.Platform == "WC" {
 			errr := updateWC(convertToString(item.PlatformID), "regular_price", `"`+sale_pricestr+`"`)
 			if errr != "" {
-				log.Println("error updating woocommerce price:", errr)
+				log.Println(item.PlatformID, "error updating woocommerce price:", errr)
 				//flag = 1
 			}
 		}
@@ -456,6 +456,21 @@ func getProductStock(product_id string, location string) (sale_price, stock_marg
 	for retry := 0; retry < maxRetries; retry++ {
 		if appsresp.StatusCode == http.StatusInternalServerError {
 			fmt.Println("received 500 response. retrying...")
+			time.Sleep(2 * time.Second) // Wait before retrying
+			appsresp, err = client.Do(get)
+			if err != nil {
+				return "", "", "", err
+			}
+		} else {
+			break // Exit the retry loop for non-500 responses
+		}
+	}
+
+	// Retry loop for handling 500 responses
+	for retry := 0; retry < maxRetries; retry++ {
+		if appsresp.StatusCode == 400 {
+			fmt.Print(find_in_stock)
+			fmt.Println("received 400 response. retrying...")
 			time.Sleep(2 * time.Second) // Wait before retrying
 			appsresp, err = client.Do(get)
 			if err != nil {
