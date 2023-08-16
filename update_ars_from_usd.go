@@ -139,7 +139,7 @@ func handleASUsdWebhook(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			ars_price := convertToString((supplier_usd * (1 + usd_iva/100)) * usd_price)
+			ars_price := fmt.Sprintf("%.2f", (supplier_usd*(1+usd_iva/100))*usd_price)
 
 			payload = payload + fmt.Sprintf(`{
 												"product_id" : %s,
@@ -181,6 +181,7 @@ func handleASUsdWebhook(w http.ResponseWriter, r *http.Request) {
 	// Check the response status code
 	if resp.StatusCode != http.StatusOK {
 		log.Printf("unexpected status code from appsheet when updating ars prices: %d", resp.StatusCode)
+		log.Println(payload)
 
 	}
 

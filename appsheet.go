@@ -11,6 +11,8 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
 // handleASMovementWebhook receives a product_id which stock has been modified
@@ -312,7 +314,7 @@ func handleASCountingWebhook(w http.ResponseWriter, r *http.Request) {
 
 	// Unmarshal the JSON data into the struct
 	var responseData []ASItemsToCountWebhookPayload
-	err = json.Unmarshal(body, &responseData)
+	err = json.Unmarshal([]byte(body), &responseData)
 	if err != nil {
 		log.Printf("failed to unmarshal response data: %v", err)
 		return
@@ -422,10 +424,12 @@ type stockData struct {
 // Returns the stock of the product in the location specified. If location is "" returns the corresponding scope stock.
 func getProductStock(product_id string, location string) (sale_price, stock_margin, stock string, err error) {
 
-	stockgetURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/STOCK/Action", os.Getenv("appsheet_id"))
+	time.Sleep(8 * time.Second)
+
+	stockgetURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/stock/Action", os.Getenv("appsheet_id"))
 	find_in_stock := `{
 		"Action": "Find",
-		  "Properties": 
+		  "Properties":
 		  	{"Locale": "en-US",
 			"Location": "47.623098, -122.330184",
 			"Timezone": "Pacific Standard Time",
@@ -451,12 +455,27 @@ func getProductStock(product_id string, location string) (sale_price, stock_marg
 	}
 	defer appsresp.Body.Close()
 
+	// Connect to the MySQL database
+	/*db, err := sql.Open("mysql", "megared_pedro:Engsu_23@tcp(Mysql4.gohsphere.com)/megared_energiaglobal_23?charset=utf8")
+	if err != nil {
+		log.Fatal("error connecting to the database:", err)
+	}
+	defer db.Close()
+
+	// Execute the query
+	rows, err := db.Query(fmt.Sprintf("SELECT * FROM STOCK WHERE product_id = %s", product_id))
+	if err != nil {
+		log.Fatal("error executing query:", err)
+	} else {
+		rows.Close()
+	}*/
+
 	// Retry loop for handling 500 responses
-	maxRetries := 3
-	for retry := 0; retry < maxRetries; retry++ {
+	maxRetries := 4
+	for retry := 1; retry < maxRetries; retry++ {
 		if appsresp.StatusCode == http.StatusInternalServerError {
-			fmt.Println("received 500 response. retrying...")
-			time.Sleep(2 * time.Second) // Wait before retrying
+			fmt.Println(product_id, "received 500 response. retrying...")
+			time.Sleep(time.Duration(90*retry) * time.Second) // Wait before retrying
 			appsresp, err = client.Do(get)
 			if err != nil {
 				return "", "", "", err
@@ -467,11 +486,11 @@ func getProductStock(product_id string, location string) (sale_price, stock_marg
 	}
 
 	// Retry loop for handling 500 responses
-	for retry := 0; retry < maxRetries; retry++ {
+	for retry := 1; retry < maxRetries; retry++ {
 		if appsresp.StatusCode == 400 {
-			fmt.Print(find_in_stock)
-			fmt.Println("received 400 response. retrying...")
-			time.Sleep(2 * time.Second) // Wait before retrying
+			//fmt.Print(find_in_stock)
+			fmt.Println(product_id, "received 400 response. retrying...")
+			time.Sleep(time.Duration(90*retry) * time.Second) // Wait before retrying
 			appsresp, err = client.Do(get)
 			if err != nil {
 				return "", "", "", err
@@ -486,7 +505,7 @@ func getProductStock(product_id string, location string) (sale_price, stock_marg
 		//fmt.Println("getProductStock", appsresp.StatusCode)
 		//fmt.Print(product_id)
 		//log.Fatal(find_in_stock)
-		return "", "", "", errors.New(convertToString(appsresp.StatusCode))
+		return "", "", "", errors.New(fmt.Sprintln("final", (appsresp.StatusCode)))
 	}
 
 	// Read the response body
@@ -499,7 +518,7 @@ func getProductStock(product_id string, location string) (sale_price, stock_marg
 	var responseData []stockData
 
 	// Unmarshal the JSON data into the struct
-	err = json.Unmarshal(body, &responseData)
+	err = json.Unmarshal([]byte(body), &responseData)
 	if err != nil {
 		return "", "", "", fmt.Errorf("error unmarshaling response data: %v", err)
 	}
@@ -553,6 +572,8 @@ type PlatformsData struct {
 // Returns the StockMargin, AlepheeID, MeliID, WCID based on a product_id
 func getPlatformsID(product_id string) ([]PlatformsData, string) {
 
+	time.Sleep(5 * time.Second)
+
 	var ProductPlatformsData []PlatformsData
 
 	stockgetURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/PLATFORMS/Action", os.Getenv("appsheet_id"))
@@ -591,9 +612,9 @@ func getPlatformsID(product_id string) ([]PlatformsData, string) {
 	var PlatformData []PlatformsData
 
 	// Unmarshal the JSON data into the struct
-	err = json.Unmarshal(body, &PlatformData)
+	err = json.Unmarshal([]byte(body), &PlatformData)
 	if err != nil {
-		fmt.Print(body)
+		fmt.Print(string(body))
 		fmt.Print(product_id)
 		return ProductPlatformsData, fmt.Sprintln("error unmarshaling response data:", err)
 	}
