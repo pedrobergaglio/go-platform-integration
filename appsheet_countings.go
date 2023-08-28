@@ -160,7 +160,7 @@ func LIMPIEZACounting(counting ASCountingsWebhookPayload) {
 	}*/
 
 	// Connect to the MySQL database
-	db, err := sql.Open("mysql", "megared_pedro:Engsu_23@tcp(Mysql4.gohsphere.com)/megared_energiaglobal_23?charset=utf8")
+	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8", os.Getenv("database_user"), os.Getenv("database_pass"), os.Getenv("database_ip"), os.Getenv("database_name")))
 	if err != nil {
 		log.Fatal("error connecting to the database:", err)
 	}
