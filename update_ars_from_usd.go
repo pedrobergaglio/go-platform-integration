@@ -123,19 +123,19 @@ func handleASUsdWebhook(w http.ResponseWriter, r *http.Request) {
 
 			supplier_usd, err := strconv.ParseFloat(supplier.SupplierUSD, 64)
 			if err != nil {
-				log.Printf("error parsing string to int: %v", err)
+				log.Printf("%s error parsing supplier usd string to int: %v", item.ProductID, err)
 				return
 			}
 
 			usd_price, err := strconv.ParseFloat(item.USDPrice, 64)
 			if err != nil {
-				log.Printf("error parsing string to int: %v", err)
+				log.Printf("%s error parsing price usd string to int: %v", item.ProductID, err)
 				return
 			}
 
 			usd_iva, err := strconv.ParseFloat(item.USDIva, 64)
 			if err != nil {
-				log.Printf("error parsing string to int: %v", err)
+				log.Printf("%s error parsing iva string to int: %v", item.ProductID, err)
 				return
 			}
 

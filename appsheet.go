@@ -19,7 +19,7 @@ func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 	// Ensure that the request method is POST
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		log.Println("no era el metodo")
+		log.Println("error: method is not post")
 		return
 	}
 
@@ -31,7 +31,7 @@ func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// string to int
+	// string to
 	product_id, err := strconv.Atoi(convertToString(payload.ProductID))
 	if err != nil {
 		log.Println("error passing product_id to int:", err)
