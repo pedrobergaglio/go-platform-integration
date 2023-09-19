@@ -121,32 +121,42 @@ func handleASUsdWebhook(w http.ResponseWriter, r *http.Request) {
 
 		if item.Supplier == supplier.Supplier {
 
-			supplier_usd, err := strconv.ParseFloat(supplier.SupplierUSD, 64)
-			if err != nil {
-				log.Printf("%s error parsing supplier usd string to int: %v", item.ProductID, err)
-				return
-			}
+			if item.USDIva != "" {
 
-			usd_price, err := strconv.ParseFloat(item.USDPrice, 64)
-			if err != nil {
-				log.Printf("%s error parsing price usd string to int: %v", item.ProductID, err)
-				return
-			}
+				supplier_usd, err := strconv.ParseFloat(supplier.SupplierUSD, 64)
+				if err != nil {
+					log.Printf("%s error parsing supplier usd string to int: %v", item.ProductID, err)
+					return
+				}
 
-			usd_iva, err := strconv.ParseFloat(item.USDIva, 64)
-			if err != nil {
-				log.Printf("%s error parsing iva string to int: %v", item.ProductID, err)
-				return
-			}
+				usd_price, err := strconv.ParseFloat(item.USDPrice, 64)
+				if err != nil {
+					log.Printf("%s error parsing price usd string to int: %v", item.ProductID, err)
+					return
+				}
 
-			ars_price := fmt.Sprintf("%.2f", (supplier_usd*(1+usd_iva/100))*usd_price)
+				usd_iva, err := strconv.ParseFloat(item.USDIva, 64)
+				if err != nil {
+					log.Printf("%s error parsing iva string to int: %v", item.ProductID, err)
+					return
+				}
 
-			payload = payload + fmt.Sprintf(`{
+				ars_price := fmt.Sprintf("%.2f", (supplier_usd*(1+usd_iva/100))*usd_price)
+
+				payload = payload + fmt.Sprintf(`{
 												"product_id" : %s,
 												"sale_price_ars" : %s,
 												"supplier_usd" : %s
 												},`, item.ProductID, ars_price, supplier.SupplierUSD)
 
+			} else if item.USDIva == "" {
+
+				payload = payload + fmt.Sprintf(`{
+				"product_id" : %s,
+				"supplier_usd" : %s
+				},`, item.ProductID, supplier.SupplierUSD)
+
+			}
 		}
 	}
 
