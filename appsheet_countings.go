@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/rainycape/unidecode"
+
 	_ "github.com/go-sql-driver/mysql"
 )
 
@@ -123,11 +125,9 @@ func RECONTEOCounting(counting ASCountingsWebhookPayload) {
 		return
 	}
 
-	movement_type := fmt.Sprintf("Conteo %s", counting.ID)
-
 	for _, item := range responseData {
 
-		errr := setProductStock(item.ID, counting.Location, item.Quantity, movement_type)
+		errr := setProductStock(item.ID, counting.Location, item.Quantity, counting.ID, counting.User)
 		if errr != "" {
 			log.Printf("error, failed to set product stock: %v", err)
 			return
@@ -138,24 +138,21 @@ func RECONTEOCounting(counting ASCountingsWebhookPayload) {
 }
 
 type StockData struct {
-	ProductID  string
-	Brand      string
-	Fabrica    string
-	Oran       string
-	Rodriguez  string
-	MarcosPaz  string
-	TotalStock string
+	ProductID string
+	Brand     string
+	Stock     string
 }
 
+// LIMPIEZACounting counting ASCountingsWebhookPayload
 func LIMPIEZACounting(counting ASCountingsWebhookPayload) {
 
 	// Initialize the ASCountingsWebhookPayload struct
 	/*counting := ASCountingsWebhookPayload{
-		Brands:   "CZERWENY",
+		Brands:   "BOSCH , BRIGGS&STRATTON , CLIPPER , CZERWENY , DOGO , ECHO , EINHELL , ENERGÍA GLOBAL , GRUNDFOS , GTM , HONDA , HUNTER , HUSQVARNA , KAISE , KOHLER , LABOR , LINZ , METABO , MTD , NIWA , NSM , OFEN , PAMPA PRO , POULAN PRO , ROWA , SENSEI , SINCRO , SKIL , STIHL , VANGUARD , VULCANO , VARIOS , Cummins",
 		ID:       "999",
 		Datetime: "",
 		User:     "pedrobergaglio04@gmail.com",
-		Location: "Marcos Paz",
+		Location: "Márcos Paz",
 		Mode:     "LIMPIEZA (NUEVO)",
 	}*/
 
@@ -170,9 +167,9 @@ func LIMPIEZACounting(counting ASCountingsWebhookPayload) {
 	// Query the products stock with the brands selected
 	// *********************
 
-	query := `SELECT product_id, brand, fabrica, oran, rodriguez, marcos_paz, total_stock 
+	query := fmt.Sprintf(`SELECT product_id, brand, %s 
 	FROM STOCK
-	WHERE `
+	WHERE `, unidecode.Unidecode(strings.ReplaceAll(strings.ToLower(counting.Location), " ", "_")))
 
 	brands := strings.Split(counting.Brands, ",")
 
@@ -251,15 +248,13 @@ func LIMPIEZACounting(counting ASCountingsWebhookPayload) {
 			case "brand":
 				stockData.Brand = convertedVal.(string)
 			case "fabrica":
-				stockData.Fabrica = convertedVal.(string)
+				stockData.Stock = convertedVal.(string)
 			case "oran":
-				stockData.Oran = convertedVal.(string)
+				stockData.Stock = convertedVal.(string)
 			case "rodriguez":
-				stockData.Rodriguez = convertedVal.(string)
+				stockData.Stock = convertedVal.(string)
 			case "marcos_paz":
-				stockData.MarcosPaz = convertedVal.(string)
-			case "total_stock":
-				stockData.TotalStock = convertedVal.(string)
+				stockData.Stock = convertedVal.(string)
 			}
 		}
 
@@ -277,14 +272,14 @@ func LIMPIEZACounting(counting ASCountingsWebhookPayload) {
 
 	// Prepare the payload for finding the product ID and quantity
 	payload := fmt.Sprintf(`{
-		"Action": "Find",
-		"Properties": {
-			"Locale": "es-US",
-			"Selector": 'Filter(items_to_count, [user]="%s")',
-			"Timezone": "Argentina Standard Time",
-		},
-		"Rows": []
-	}`, counting.User)
+				"Action": "Find",
+				"Properties": {
+					"Locale": "es-US",
+					"Selector": 'Filter(items_to_count, [user]="%s")',
+					"Timezone": "Argentina Standard Time",
+				},
+				"Rows": []
+			}`, counting.User)
 
 	// Create the request
 	requestURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/items_to_count/Action", os.Getenv("appsheet_id"))
@@ -329,8 +324,6 @@ func LIMPIEZACounting(counting ASCountingsWebhookPayload) {
 		return
 	}
 
-	movement_type := fmt.Sprintf("Conteo %s", counting.ID)
-
 	var flag bool
 
 	// *********************
@@ -348,8 +341,9 @@ func LIMPIEZACounting(counting ASCountingsWebhookPayload) {
 			if stockData.ProductID == item.ID {
 
 				log.Print(stockData.ProductID)
-
-				setProductStock(stockData.ProductID, counting.Location, item.Quantity, movement_type)
+				//log.Println("setear:")
+				//log.Println(stockData.ProductID, counting.Location, item.Quantity, counting.ID, counting.User)
+				setProductStock(stockData.ProductID, counting.Location, item.Quantity, counting.ID, counting.User)
 
 				flag = false
 
@@ -357,9 +351,15 @@ func LIMPIEZACounting(counting ASCountingsWebhookPayload) {
 
 		}
 
-		//if this product wasn't counted, then there's no stock
-		if flag {
-			setProductStock(stockData.ProductID, counting.Location, "0", movement_type)
+		//if this product wasn't counted and has stock in the system, then set it to 0.
+		if flag && stockData.Stock != "0" {
+
+			//counter++
+
+			//log.Println(counter, "dar de baja:")
+
+			//log.Println(stockData.ProductID, counting.Location, "0", counting.ID, counting.User)
+			setProductStock(stockData.ProductID, counting.Location, "0", counting.ID, counting.User)
 		}
 
 	}
@@ -367,7 +367,7 @@ func LIMPIEZACounting(counting ASCountingsWebhookPayload) {
 }
 
 // Pass location param formatted as the user interface.
-func setProductStock(product_id, location, str_quantity, movement_type string) (err string) {
+func setProductStock(product_id, location, str_quantity, counting, user string) (err string) {
 
 	_, _, str_stock, errr := getProductStock(product_id, location)
 	if errr != nil {
@@ -387,33 +387,33 @@ func setProductStock(product_id, location, str_quantity, movement_type string) (
 	if stock != quantity {
 
 		if quantity == 0 {
-			log.Printf("setting %s to zero stock in %s", product_id, location)
+			log.Printf("setting %s to 0 stock in %s", product_id, location)
 		}
 
 		stock_difference := convertToString(quantity - stock)
 
 		if location == "Fábrica" {
-			_, errr = addMovement(product_id, stock_difference, "0", "0", "0", movement_type)
+			_, errr = addMovement(product_id, stock_difference, "0", "0", "0", counting, user)
 			if errr != nil {
 				return fmt.Sprintf("%s error adding movement to appsheet: %v", product_id, errr)
 			}
 		} else if location == "Orán" {
-			_, errr = addMovement(product_id, "0", stock_difference, "0", "0", movement_type)
+			_, errr = addMovement(product_id, "0", stock_difference, "0", "0", counting, user)
 			if errr != nil {
 				return fmt.Sprintf("%s error adding movement to appsheet: %v", product_id, errr)
 			}
 		} else if location == "Rodriguez" {
-			_, errr = addMovement(product_id, "0", "0", stock_difference, "0", movement_type)
+			_, errr = addMovement(product_id, "0", "0", stock_difference, "0", counting, user)
 			if errr != nil {
 				return fmt.Sprintf("%s error adding movement to appsheet: %v", product_id, errr)
 			}
 		} else if location == "Marcos Paz" {
-			_, errr = addMovement(product_id, "0", "0", "0", stock_difference, movement_type)
+			_, errr = addMovement(product_id, "0", "0", "0", stock_difference, counting, user)
 			if errr != nil {
 				return fmt.Sprintf("%s error adding movement to appsheet: %v", product_id, errr)
 			}
 		} else {
-			log.Println(movement_type, "no location designed")
+			log.Println(counting, "no location designed")
 		}
 
 	}

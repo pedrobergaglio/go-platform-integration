@@ -13,7 +13,7 @@ import (
 )
 
 // Adds a movement in appsheet with the product_id, stock in each location, and movement_type
-func addMovement(product_id string, fabrica string, oran string, rodriguez string, marcos_paz string, movement_type string) (string, error) {
+func addMovement(product_id, fabrica, oran, rodriguez, marcos_paz, counting, user string) (string, error) {
 
 	payload := fmt.Sprintf(`
 	{
@@ -29,10 +29,11 @@ func addMovement(product_id string, fabrica string, oran string, rodriguez strin
 				"oran": %s,
 				"rodriguez": %s,
 				"marcos_paz": %s,
-				"movement_type": "%s"
+				"counting": %s,
+				"user": "%s"
 			}
 		]
-	}`, product_id, fabrica, oran, rodriguez, marcos_paz, movement_type)
+	}`, product_id, fabrica, oran, rodriguez, marcos_paz, counting, user)
 	// Create the request
 	requestURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/MOVEMENTS/Action", os.Getenv("appsheet_id"))
 	req, err := http.NewRequest(http.MethodPost, requestURL, bytes.NewBufferString(payload))

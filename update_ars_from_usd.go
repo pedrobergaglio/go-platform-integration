@@ -164,6 +164,8 @@ func handleASUsdWebhook(w http.ResponseWriter, r *http.Request) {
 
 	payload = payload + "]}"
 
+	fmt.Print(payload)
+
 	//fmt.Print(payload)
 
 	// Create the request

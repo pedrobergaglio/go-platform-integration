@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 
 	//"time"
@@ -27,7 +26,7 @@ type WCWebhookPayload struct {
 
 // Process an order notification from woocommerce
 // For each item in the order, adds a movement in appsheet to substract the quantity sold
-func handleWCWebhook(w http.ResponseWriter, r *http.Request) {
+/*func handleWCWebhook(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("received wc order notification")
 
@@ -90,7 +89,7 @@ func handleWCWebhook(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-	}
+
 
 	// Print the raw request body
 	//log.Println(string(body))
@@ -99,17 +98,22 @@ func handleWCWebhook(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("webhook processed successfully"))
 	log.Println("woocommerce notification processed")
-}
+}	}*/
 
 // Updates a wc product property
-func updateWC(wc_id string, field string, value interface{}) string {
+func updateWC(wc_id, price, stock string) string {
 
-	wcURL := fmt.Sprintf("https://www.energiaglobal.com.ar/wp-json/wc/v3/products/%s", fmt.Sprint(wc_id))
-	wcPayload := fmt.Sprintf(`{"%s": %s}`, fmt.Sprint(field), fmt.Sprint(value))
+	wcURL := fmt.Sprintf("https://www.energiaglobal.com.ar/wp-json/wc/v3/products/%s", wc_id)
+	wcPayload := fmt.Sprintf(
+		`{
+			"regular_price": "%s",
+			"stock_quantity": %s
+			}`,
+		price, stock)
 
 	req, err := http.NewRequest(http.MethodPut, wcURL, bytes.NewBufferString(wcPayload))
 	if err != nil {
-		return "error creating request for WooCommerce:" + fmt.Sprint(err)
+		return "error creating request for wc:" + fmt.Sprint(err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -118,12 +122,13 @@ func updateWC(wc_id string, field string, value interface{}) string {
 	client := http.DefaultClient
 	resp, err := client.Do(req)
 	if err != nil {
-		return "error updating product in WooCommerce:" + fmt.Sprint(err)
+		return "error updating product in wc:" + fmt.Sprint(err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "unexpected status code from WooCommerce:" + fmt.Sprint(resp.StatusCode)
+		errorBody, _ := io.ReadAll(resp.Body)
+		return "error updating product in wc: " + string(errorBody)
 	}
 
 	return ""

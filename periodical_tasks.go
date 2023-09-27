@@ -437,7 +437,7 @@ func RunAtTime() {
 	// Start a goroutine that runs the scheduled functions
 	go func() {
 		time.Sleep(durationUntilMidnight)
-		updateRumboPricesAlephee()
+		//updateRumboPricesAlephee()
 		checkStock()
 		addNewDate()
 		//updateRumboPricesAlephee()
@@ -447,7 +447,7 @@ func RunAtTime() {
 		defer ticker.Stop()
 		// Schedule the daily task to run again every 24 hours
 		for range ticker.C {
-			updateRumboPricesAlephee()
+			//updateRumboPricesAlephee()
 			addNewDate()
 			checkStock()
 			//updateRumboPricesAlephee()

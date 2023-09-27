@@ -9,7 +9,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 )
 
@@ -38,7 +37,7 @@ type MeliItem struct {
 // handleMeliWebhook process an order notification from meli.
 // Receives the order id, then requests the data of that order to get the items and quantities
 // For each item, adds a movement in appsheet to substract the sold quantity
-func handleMeliWebhook(w http.ResponseWriter, r *http.Request) {
+/*func handleMeliWebhook(w http.ResponseWriter, r *http.Request) {
 
 	// Ensure that the request method is POST
 	if r.Method != http.MethodPost {
@@ -207,7 +206,7 @@ func handleMeliWebhook(w http.ResponseWriter, r *http.Request) {
 		log.Println("product_id:", product_id, "quantity:", item.Quantity)
 		//log.Println("quantity:", item.Quantity)
 
-		_, err = addMovement(product_id, "0", convertToString(-item.Quantity), "0", "0", "Mercado Libre")
+		_, err = addMovement(product_id, "0", convertToString(-item.Quantity), "0", "0", "", "")
 		if err != nil {
 			log.Println("error posting movement:", err)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -225,9 +224,10 @@ func handleMeliWebhook(w http.ResponseWriter, r *http.Request) {
 	log.Println("meli notification processed")
 
 }
+*/
 
 // Updates meli a publication value (stock or price)
-func updateMeli(meli_id string, field string, value interface{}) string {
+func updateMeli(meli_id, price, stock string) string {
 
 	// Retry for a maximum of 3 times
 	maxRetries := 3
@@ -236,7 +236,13 @@ func updateMeli(meli_id string, field string, value interface{}) string {
 	for {
 
 		URL := fmt.Sprintf("https://api.mercadolibre.com/items/MLA%s", fmt.Sprint(meli_id))
-		payload := fmt.Sprintf(`{"%s": %s}`, fmt.Sprint(field), fmt.Sprint(value))
+		payload := fmt.Sprintf(`{`)
+
+		if price != "" {
+			payload = payload + fmt.Sprintf(`"price": %s,`, price)
+		}
+
+		payload = payload + fmt.Sprintf(`"available_quantity": %s}`, stock)
 
 		req, err := http.NewRequest(http.MethodPut, URL, bytes.NewBufferString(payload))
 		if err != nil {
@@ -267,7 +273,8 @@ func updateMeli(meli_id string, field string, value interface{}) string {
 			}
 
 		} else {
-			return "unexpected status code from meli:" + fmt.Sprint(resp.StatusCode)
+			errorBody, _ := io.ReadAll(resp.Body)
+			return "error updating product in meli: " + string(errorBody)
 		}
 
 	}
