@@ -96,7 +96,7 @@ func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 		// Update the MELI product
 		if item.Platform == "MELI" {
 
-			error = updateMeli(item.PlatformID, "available_quantity", stock_minus_margin)
+			error = updateMeli(item.PlatformID, "", stock_minus_margin)
 			if error != "" {
 				log.Println("error updating stock in meli:", error)
 				flag = 1
