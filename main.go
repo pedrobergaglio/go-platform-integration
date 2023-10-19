@@ -115,7 +115,7 @@ func convertToString(value interface{}) string {
 func main() {
 
 	loadConfig()
-	RunAtTime()
+	//RunAtTime()
 
 	// Start a background goroutine to periodically refresh prices and tokens
 	go refreshPeriodically()
@@ -126,9 +126,10 @@ func main() {
 	//http.HandleFunc("/meli", handleMeliWebhook)
 	//http.HandleFunc("/woocommerce", handleWCWebhook)
 	http.HandleFunc("/countings", handleASCountingWebhook)
-	http.HandleFunc("/usd", handleASUsdWebhook)
+	//http.HandleFunc("/usd", handleASUsdWebhook)
 	http.HandleFunc("/publication", handlePublicationUpdate)
 	http.HandleFunc("/product", handlePublicationRequest)
+	http.HandleFunc("/sos", getSosId)
 
 	// Root route handler
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -137,7 +138,7 @@ func main() {
 	})
 
 	// Use PORT environment variable provided by Railway or default to 8080
-	port := ":" + os.Getenv("PORT")
+	port := ":" + os.Getenv("port")
 	if port == ":" {
 		port = ":8080"
 	}
@@ -149,10 +150,15 @@ func main() {
 }
 
 type Publication struct {
-	ID       string `json:"id"`
-	Platform string `json:"platform"`
-	Price    string `json:"price"`
-	Stock    string `json:"stock"`
+	ID        string `json:"id"`
+	Platform  string `json:"platform"`
+	Price     string `json:"price"`
+	Stock     string `json:"stock"`
+	SIVAPrice string `json:"siva_price"`
+	Cuenta    string `json:"sos_cuit"`
+	Producto  string `json:"product"`
+	SOSCode   string `json:"sos_code"`
+	IVA       string `json:"product_iva"`
 }
 
 func handlePublicationUpdate(w http.ResponseWriter, r *http.Request) {
@@ -206,6 +212,7 @@ func handlePublicationUpdate(w http.ResponseWriter, r *http.Request) {
 				log.Println("error updating product in wc:", error)
 			}
 
+		} else if publication.Platform == "SOS" {
 		} else {
 			log.Println("no platform matched")
 		}
@@ -232,6 +239,13 @@ func handlePublicationUpdate(w http.ResponseWriter, r *http.Request) {
 		error := updateWC(publication.ID, publication.Price, publication.Stock)
 		if error != "" {
 			log.Println("error updating product in wc:", error)
+		}
+
+	} else if publication.Platform == "SOS" {
+
+		error := updateSos(publication.SIVAPrice, publication.IVA, publication.ID, publication.Cuenta, publication.Producto, publication.SOSCode)
+		if error != "" {
+			log.Println("error updating product in sos:", error)
 		}
 
 	} else {
@@ -263,6 +277,7 @@ func handlePublicationRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Println("Producto actualizado: ", requestData.ID)
+	log.Println("Publicaciones:", requestData.Publications)
 
 	// Split the comma-separated codes into an array
 	codes := strings.Split(requestData.Publications, ",")
@@ -286,7 +301,7 @@ func handlePublicationRequest(w http.ResponseWriter, r *http.Request) {
 		randomNum := rand.Intn(1000000)
 		// Add an entry for the code and randomNum
 		payload += fmt.Sprintf(`{
-			"platform_id" : "%s",
+			"id" : "%s",
 			"updatecol" : "%d"
 		},`, strings.TrimSpace(code), randomNum)
 	}
