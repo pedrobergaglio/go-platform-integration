@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -43,20 +42,23 @@ func getSosId(w http.ResponseWriter, r *http.Request) {
 	// Fetch data from MySQL
 	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8", os.Getenv("database_user"), os.Getenv("database_pass"), os.Getenv("database_ip"), os.Getenv("database_name")))
 	if err != nil {
-		log.Fatal("error connecting to the database:", err)
+		fmt.Sprintln("error connecting to the database:", err)
+		return
 	}
 	defer db.Close()
 
 	rows, err := db.Query(`SELECT id, sos_cuit, sos_code FROM PLATFORMS WHERE platform='SOS' AND platform_id = 0 AND sos_cuit = 'ITEC'`)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Sprintln(fmt.Printf("unexpected error sql: %d", err))
+		return
 	}
 	defer rows.Close()
 
 	// Get column names
 	columns, err := rows.Columns()
 	if err != nil {
-		log.Fatal("error getting column names:", err)
+		fmt.Sprintln("error getting column names:", err)
+		return
 	}
 
 	// Create a slice to hold the row values
@@ -84,7 +86,8 @@ func getSosId(w http.ResponseWriter, r *http.Request) {
 		}
 		err := rows.Scan(values...)
 		if err != nil {
-			log.Fatal("error scanning row:", err)
+			fmt.Sprintln("error scanning row:", err)
+			return
 		}
 
 		// Loop through the columns and assign values to the struct
@@ -113,7 +116,8 @@ func getSosId(w http.ResponseWriter, r *http.Request) {
 			sqlDataList = append(sqlDataList, sqlData)
 
 			if err := rows.Err(); err != nil {
-				log.Fatal("error retrieving rows:", err)
+				fmt.Sprintln("error retrieving rows:", err)
+				return
 			}
 
 			// Print the values obtained from MySQL
@@ -146,7 +150,8 @@ func getSosId(w http.ResponseWriter, r *http.Request) {
 
 			req, err := http.NewRequest("GET", url, nil)
 			if err != nil {
-				log.Fatal(err)
+				fmt.Sprintln("sos_itec:", err)
+				return
 			}
 
 			req.Header.Add("Authorization", token)
@@ -154,12 +159,14 @@ func getSosId(w http.ResponseWriter, r *http.Request) {
 			client := &http.Client{}
 			resp, err := client.Do(req)
 			if err != nil {
-				log.Fatal(err)
+				fmt.Sprintln("resp, err := client.Do(req):", err)
+				return
 			}
 			defer resp.Body.Close()
 
 			if err := json.NewDecoder(resp.Body).Decode(&sosData); err != nil {
-				log.Fatal(err)
+				fmt.Sprintln("decode", err)
+				return
 			}
 		}
 
@@ -211,7 +218,8 @@ func getSosId(w http.ResponseWriter, r *http.Request) {
 					requestURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/platforms/Action", os.Getenv("appsheet_id"))
 					req, err := http.NewRequest(http.MethodPost, requestURL, bytes.NewBufferString(payload))
 					if err != nil {
-						log.Fatal(fmt.Printf("failed to create request: %v", err))
+						fmt.Sprintln("failed to create request", err)
+						return
 					}
 
 					// Set request headers
@@ -222,14 +230,16 @@ func getSosId(w http.ResponseWriter, r *http.Request) {
 					client := http.DefaultClient
 					resp, err := client.Do(req)
 					if err != nil {
-						log.Fatal(fmt.Printf("failed to send request: %v", err))
+						fmt.Sprintln("failed to send request", err)
+						return
 					}
 					defer resp.Body.Close()
 
 					// Check the response status code
 					if resp.StatusCode != http.StatusOK {
 						fmt.Println(payload)
-						log.Fatal(fmt.Printf("unexpected status code: %d", resp.StatusCode))
+						fmt.Sprintln("unexpected status code", resp.StatusCode)
+						return
 					}
 				}
 			}
@@ -244,7 +254,7 @@ func getSosId(w http.ResponseWriter, r *http.Request) {
 				"Action": "Edit",
 				"Properties": {
 					"Locale": "es-US",
-					"Timezone": "Argentina Standard Time",
+					"Timezone": "Argentina Standard Time"
 				},
 				"Rows": [
 					{
@@ -258,7 +268,8 @@ func getSosId(w http.ResponseWriter, r *http.Request) {
 				requestURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/platforms/Action", os.Getenv("appsheet_id"))
 				req, err := http.NewRequest(http.MethodPost, requestURL, bytes.NewBufferString(payload))
 				if err != nil {
-					log.Fatal(fmt.Printf("failed to create request: %v", err))
+					fmt.Sprintln("failed to create request", err)
+					return
 				}
 
 				// Set request headers
@@ -269,14 +280,16 @@ func getSosId(w http.ResponseWriter, r *http.Request) {
 				client := http.DefaultClient
 				resp, err := client.Do(req)
 				if err != nil {
-					log.Fatal(fmt.Printf("failed to send request: %v", err))
+					fmt.Sprintln("failed to send request", err)
+					return
 				}
 				defer resp.Body.Close()
 
 				// Check the response status code
 				if resp.StatusCode != http.StatusOK {
 					fmt.Println(payload)
-					log.Fatal(fmt.Printf("unexpected status code: %d", resp.StatusCode))
+					fmt.Sprintln("unexpected status code", resp.StatusCode)
+					return
 				}
 
 				continue outerLoop2
@@ -296,20 +309,23 @@ func getSosId(w http.ResponseWriter, r *http.Request) {
 	// Fetch data from MySQL
 	db, err = sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8", os.Getenv("database_user"), os.Getenv("database_pass"), os.Getenv("database_ip"), os.Getenv("database_name")))
 	if err != nil {
-		log.Fatal("error connecting to the database:", err)
+		fmt.Sprintln("error connecting to the database", err)
+		return
 	}
 	defer db.Close()
 
 	rows, err = db.Query(`SELECT id, sos_cuit, sos_code FROM PLATFORMS WHERE platform='SOS' AND platform_id = 0 AND sos_cuit = 'ENERGÍA GLOBAL'`)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Sprintln(err)
+		return
 	}
 	defer rows.Close()
 
 	// Get column names
 	columns, err = rows.Columns()
 	if err != nil {
-		log.Fatal("error getting column names:", err)
+		fmt.Sprintln("error getting column names", err)
+		return
 	}
 
 	// Create a slice to hold the row values
@@ -336,7 +352,8 @@ func getSosId(w http.ResponseWriter, r *http.Request) {
 		}
 		err := rows.Scan(values...)
 		if err != nil {
-			log.Fatal("error scanning row:", err)
+			fmt.Sprintln("error scanning row", err)
+			return
 		}
 
 		// Loop through the columns and assign values to the struct
@@ -365,7 +382,8 @@ func getSosId(w http.ResponseWriter, r *http.Request) {
 			sqlDataList = append(sqlDataList, sqlData)
 
 			if err := rows.Err(); err != nil {
-				log.Fatal("error retrieving rows:", err)
+				fmt.Sprintln("error retrieving rows", err)
+				return
 			}
 
 			// Print the values obtained from MySQL
@@ -399,7 +417,8 @@ func getSosId(w http.ResponseWriter, r *http.Request) {
 
 		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
-			log.Fatal(err)
+			fmt.Sprintln(err)
+			return
 		}
 
 		req.Header.Add("Authorization", token)
@@ -407,12 +426,14 @@ func getSosId(w http.ResponseWriter, r *http.Request) {
 		client := &http.Client{}
 		resp, err := client.Do(req)
 		if err != nil {
-			log.Fatal(err)
+			fmt.Sprintln(err)
+			return
 		}
 		defer resp.Body.Close()
 
 		if err := json.NewDecoder(resp.Body).Decode(&sosData); err != nil {
-			log.Fatal(err)
+			fmt.Sprintln(err)
+			return
 		}
 	}
 
@@ -446,7 +467,7 @@ func getSosId(w http.ResponseWriter, r *http.Request) {
 					"Action": "Edit",
 					"Properties": {
 						"Locale": "es-US",
-						"Timezone": "Argentina Standard Time",
+						"Timezone": "Argentina Standard Time"
 					},
 					"Rows": [
 						{
@@ -464,7 +485,8 @@ func getSosId(w http.ResponseWriter, r *http.Request) {
 				requestURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/platforms/Action", os.Getenv("appsheet_id"))
 				req, err := http.NewRequest(http.MethodPost, requestURL, bytes.NewBufferString(payload))
 				if err != nil {
-					log.Fatal(fmt.Printf("failed to create request: %v", err))
+					fmt.Sprintln("failed to create request:", err)
+					return
 				}
 
 				// Set request headers
@@ -475,14 +497,16 @@ func getSosId(w http.ResponseWriter, r *http.Request) {
 				client := http.DefaultClient
 				resp, err := client.Do(req)
 				if err != nil {
-					log.Fatal(fmt.Printf("failed to send request: %v", err))
+					fmt.Sprintln("failed to send request:", err)
+					return
 				}
 				defer resp.Body.Close()
 
 				// Check the response status code
 				if resp.StatusCode != http.StatusOK {
 					fmt.Println(payload)
-					log.Fatal(fmt.Printf("unexpected status code: %d", resp.StatusCode))
+					fmt.Sprintln("unexpected status code:", resp.StatusCode)
+					return
 				}
 			}
 		}
@@ -497,7 +521,7 @@ func getSosId(w http.ResponseWriter, r *http.Request) {
 				"Action": "Edit",
 				"Properties": {
 					"Locale": "es-US",
-					"Timezone": "Argentina Standard Time",
+					"Timezone": "Argentina Standard Time"
 				},
 				"Rows": [
 					{
@@ -511,7 +535,8 @@ func getSosId(w http.ResponseWriter, r *http.Request) {
 			requestURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/platforms/Action", os.Getenv("appsheet_id"))
 			req, err := http.NewRequest(http.MethodPost, requestURL, bytes.NewBufferString(payload))
 			if err != nil {
-				log.Fatal(fmt.Printf("failed to create request: %v", err))
+				fmt.Sprintln(fmt.Printf("failed to create request: %v", err))
+				return
 			}
 
 			// Set request headers
@@ -522,15 +547,16 @@ func getSosId(w http.ResponseWriter, r *http.Request) {
 			client := http.DefaultClient
 			resp, err := client.Do(req)
 			if err != nil {
-				log.Fatal(fmt.Printf("failed to send request: %v", err))
+				fmt.Sprintln(fmt.Printf("failed to create request: %v", err))
+				return
 			}
 			defer resp.Body.Close()
 
 			// Check the response status code
 			if resp.StatusCode != http.StatusOK {
 				fmt.Println(payload)
-				log.Fatal(fmt.Printf("unexpected status code: %d", resp.StatusCode))
-
+				fmt.Sprintln(fmt.Printf("unexpected status code: %d", resp.StatusCode))
+				return
 			}
 
 		}

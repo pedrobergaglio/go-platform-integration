@@ -33,9 +33,11 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
+	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 )
 
@@ -114,8 +116,26 @@ func convertToString(value interface{}) string {
 
 func main() {
 
-	loadConfig()
+	//loadConfig()
 	//RunAtTime()
+
+	// Get the path to the directory where the binary is located
+	exe, err := os.Executable()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Get the directory of the executable
+	dir := filepath.Dir(exe)
+
+	// Specify the path to the .env file relative to the executable's directory
+	envFile := filepath.Join(dir, "resources", ".env")
+
+	// Load the .env file
+	err = godotenv.Load(envFile)
+	if err != nil {
+		log.Fatalf("Error loading .env file: %v", err)
+	}
 
 	// Start a background goroutine to periodically refresh prices and tokens
 	go refreshPeriodically()
@@ -336,7 +356,8 @@ func handlePublicationRequest(w http.ResponseWriter, r *http.Request) {
 	if resp.StatusCode != http.StatusOK {
 		// Read and log the error response body
 		errorBody, _ := io.ReadAll(resp.Body)
-		log.Printf("unexpected status code from appsheet: %s", errorBody)
+		fmt.Println(payload)
+		log.Printf("handle publication request unexpected status code from appsheet: %s", errorBody)
 		return
 	}
 
