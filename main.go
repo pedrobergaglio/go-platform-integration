@@ -33,11 +33,12 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
-	"path/filepath"
+	"os/exec"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
-	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 )
 
@@ -116,29 +117,11 @@ func convertToString(value interface{}) string {
 
 func main() {
 
-	//loadConfig()
-	//RunAtTime()
-
-	// Get the path to the directory where the binary is located
-	exe, err := os.Executable()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Get the directory of the executable
-	dir := filepath.Dir(exe)
-
-	// Specify the path to the .env file relative to the executable's directory
-	envFile := filepath.Join(dir, "resources", ".env")
-
-	// Load the .env file
-	err = godotenv.Load(envFile)
-	if err != nil {
-		log.Fatalf("Error loading .env file: %v", err)
-	}
+	loadConfig()
+	RunAtTime()
 
 	// Start a background goroutine to periodically refresh prices and tokens
-	go refreshPeriodically()
+	//go refreshPeriodically()
 
 	// Register the webhook handler functions with the default server mux
 	http.HandleFunc("/movement", handleASMovementWebhook)
@@ -150,6 +133,7 @@ func main() {
 	http.HandleFunc("/publication", handlePublicationUpdate)
 	http.HandleFunc("/product", handlePublicationRequest)
 	http.HandleFunc("/sos", getSosId)
+	http.HandleFunc("/cuentas-sos", updateCuentasSosWeb)
 
 	// Root route handler
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -164,7 +148,7 @@ func main() {
 	}
 
 	// Start the server and specify the host and port
-	log.Println("server listening on", port)
+	//log.Println("server listening on", port)
 	log.Fatal(http.ListenAndServe("0.0.0.0"+port, nil))
 
 }
@@ -362,4 +346,60 @@ func handlePublicationRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func updateCuentasSos() {
+	fmt.Println("starting to update data from sos")
+
+	pythonScript := "scrape_send_sos.py"
+
+	maxRetries := 3
+	var retries int
+
+	for {
+
+		cmd := exec.Command("python3", pythonScript)
+
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			fmt.Printf("error running the python script: %v\n", err)
+
+			// Print the full error message
+			fmt.Printf("Python script error output: %s\n", string(out))
+
+			if retries < maxRetries {
+				log.Println("retrying...")
+				retries++
+				time.Sleep(time.Minute)
+			} else {
+				fmt.Println("max retries reached. giving up.")
+				return
+			}
+		}
+
+		fmt.Printf("%s\n", string(out))
+	}
+
+}
+
+var lastExecuted time.Time
+var mutex sync.Mutex
+
+func updateCuentasSosWeb(w http.ResponseWriter, r *http.Request) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	w.WriteHeader(http.StatusOK)
+
+	// Calculate the time since the last execution
+	timeSinceLastExecution := time.Since(lastExecuted)
+
+	// If less than 5 minutes have passed, return an error or perform a different action
+	if timeSinceLastExecution < 5*time.Minute {
+		w.WriteHeader(http.StatusTooManyRequests)
+		fmt.Fprintln(w, "too many requests")
+		return
+	}
+
+	updateCuentasSos()
 }

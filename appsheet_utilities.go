@@ -55,6 +55,7 @@ func addMovement(product_id, fabrica, oran, rodriguez, marcos_paz, counting, use
 
 	// Check the response status code
 	if resp.StatusCode != http.StatusOK {
+		fmt.Println(payload)
 		return "", fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 

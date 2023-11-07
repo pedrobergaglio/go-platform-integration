@@ -427,11 +427,35 @@ func refreshPeriodically() {
 }
 
 func RunAtTime() {
-	// Get the current time in UTC
-	now := time.Now().UTC()
+	now := time.Now()
+
+	// Schedule task at 18:00 UTC
+	go func() {
+		today := now.Truncate(24 * time.Hour)
+
+		// se suman 3 porque está en utc
+		next18 := today.Add(21*time.Hour + 0*time.Minute)
+		if now.After(next18) {
+			next18 = next18.Add(24 * time.Hour)
+		}
+		durationUntil18 := next18.Sub(now)
+		fmt.Println("faltan:", durationUntil18)
+
+		time.Sleep(durationUntil18)
+
+		// Set up a ticker to run the function every 24 hours
+		ticker := time.NewTicker(24 * time.Hour)
+		defer ticker.Stop()
+
+		updateCuentasSos()
+
+		for range ticker.C {
+			updateCuentasSos()
+		}
+	}()
 
 	// Calculate the duration until the next midnight UTC
-	nextMidnight := now.Truncate(24 * time.Hour).Add(24 * time.Hour)
+	/*nextMidnight := now.Truncate(24 * time.Hour).Add(24 * time.Hour)
 	durationUntilMidnight := nextMidnight.Sub(now)
 
 	// Start a goroutine that runs the scheduled functions
@@ -494,5 +518,6 @@ func RunAtTime() {
 			// Run the task you want to execute at 15:30
 			updateUsdPrices()
 		}
-	}()
+	}()*/
+
 }

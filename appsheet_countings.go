@@ -115,6 +115,8 @@ func RECONTEOCounting(counting ASCountingsWebhookPayload) {
 	if err != nil {
 		log.Printf("failed to read response body: %v", err)
 		return
+	} else {
+		log.Print("movimiento")
 	}
 
 	// Unmarshal the JSON data into the struct
@@ -127,10 +129,10 @@ func RECONTEOCounting(counting ASCountingsWebhookPayload) {
 
 	for _, item := range responseData {
 
-		errr := setProductStock(item.ID, counting.Location, item.Quantity, counting.ID, counting.User)
-		if errr != "" {
-			log.Printf("error, failed to set product stock: %v", err)
-			return
+		errror := setProductStock(item.ID, counting.Location, item.Quantity, counting.ID, counting.User)
+		if errror != "" {
+			log.Printf("error, failed to set product stock: %v", errror)
+
 		}
 
 	}
@@ -391,6 +393,8 @@ func setProductStock(product_id, location, str_quantity, counting, user string) 
 		}
 
 		stock_difference := convertToString(quantity - stock)
+
+		//IF DIFFERENCE IS O NADA
 
 		if location == "Fábrica" {
 			_, errr = addMovement(product_id, stock_difference, "0", "0", "0", counting, user)
