@@ -68,6 +68,10 @@ func handleASCountingWebhook(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+
+	if counting.User == "jondiazz932@gmail.com" {
+		reloadCounting(counting.User)
+	}
 }
 
 func RECONTEOCounting(counting ASCountingsWebhookPayload) {
@@ -161,7 +165,8 @@ func LIMPIEZACounting(counting ASCountingsWebhookPayload) {
 	// Connect to the MySQL database
 	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8", os.Getenv("database_user"), os.Getenv("database_pass"), os.Getenv("database_ip"), os.Getenv("database_name")))
 	if err != nil {
-		log.Fatal("error connecting to the database:", err)
+		log.Println("error connecting to the database:", err)
+		return
 	}
 	defer db.Close()
 
@@ -190,7 +195,8 @@ func LIMPIEZACounting(counting ASCountingsWebhookPayload) {
 	// Move the cursor to the beginning of the result set
 	rows, err := db.Query(query)
 	if err != nil {
-		log.Fatal("error executing query:", err)
+		log.Println("error executing query:", err)
+		return
 	}
 	defer rows.Close()
 
@@ -200,7 +206,8 @@ func LIMPIEZACounting(counting ASCountingsWebhookPayload) {
 	// Get column names
 	columns, err := rows.Columns()
 	if err != nil {
-		log.Fatal("error getting column names:", err)
+		log.Println("error getting column names:", err)
+		return
 	}
 
 	// Create a slice to hold the row values
@@ -227,7 +234,8 @@ func LIMPIEZACounting(counting ASCountingsWebhookPayload) {
 		}
 		err := rows.Scan(values...)
 		if err != nil {
-			log.Fatal("error scanning row:", err)
+			log.Println("error scanning row:", err)
+			return
 		}
 
 		// Loop through the columns and assign values to the struct
@@ -265,7 +273,8 @@ func LIMPIEZACounting(counting ASCountingsWebhookPayload) {
 	}
 
 	if err := rows.Err(); err != nil {
-		log.Fatal("error retrieving rows:", err)
+		log.Println("error retrieving rows:", err)
+		return
 	}
 
 	// *********************

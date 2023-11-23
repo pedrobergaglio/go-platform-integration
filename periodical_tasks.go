@@ -113,6 +113,37 @@ func checkStock() {
 
 }
 
+func reloadCounting(user string) {
+	// Connect to the MySQL database
+	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8", os.Getenv("database_user"), os.Getenv("database_pass"), os.Getenv("database_ip"), os.Getenv("database_name")))
+	if err != nil {
+		log.Println("error connecting to the database:", err)
+		return
+	}
+	defer db.Close()
+
+	// Delete rows from ITEMS_TO_COUNT
+	deleteQuery := fmt.Sprintf("DELETE FROM ITEMS_TO_COUNT WHERE user = '%s'", user)
+	_, err = db.Exec(deleteQuery)
+	if err != nil {
+		log.Println("error executing delete query:", err)
+		return
+	}
+
+	// Insert new rows into ITEMS_TO_COUNT
+	insertQuery := `
+		INSERT INTO ITEMS_TO_COUNT (product_id, user, quantity, brand)
+		SELECT product_id, ? AS user, 0 AS quantity, brand
+		FROM STOCK
+		WHERE fabrica > 0 AND brand = 'HONDA'
+	`
+	_, err = db.Exec(insertQuery, user)
+	if err != nil {
+		log.Println("error executing insert query:", err)
+		return
+	}
+}
+
 // Scrapes and updates the value of the dollar from BNA, Rumbo, Munditol
 func updateUsdPrices() {
 
@@ -417,7 +448,7 @@ func refreshPeriodically() {
 			log.Println("retrying. there was an error refreshing the meli token:", err)
 			err := refreshMeliToken()
 			if err != nil {
-				log.Fatal("there was an error refreshing the meli token:", err)
+				log.Println("there was an error refreshing the meli token:", err)
 			}
 		}
 
@@ -439,15 +470,15 @@ func RunAtTime() {
 			next18 = next18.Add(24 * time.Hour)
 		}
 		durationUntil18 := next18.Sub(now)
-		fmt.Println("faltan:", durationUntil18)
+		log.Println("faltan:", durationUntil18)
+
+		updateCuentasSos()
 
 		time.Sleep(durationUntil18)
 
 		// Set up a ticker to run the function every 24 hours
 		ticker := time.NewTicker(24 * time.Hour)
 		defer ticker.Stop()
-
-		updateCuentasSos()
 
 		for range ticker.C {
 			updateCuentasSos()
@@ -520,4 +551,175 @@ func RunAtTime() {
 		}
 	}()*/
 
+}
+
+func updateSosAt18() {
+
+	now := time.Now()
+
+	updateCuentasSos()
+
+	today := now.Truncate(24 * time.Hour)
+
+	// se suman 3 a las 18 porque está en utc (-3 horas)
+	next18 := today.Add(21*time.Hour + 0*time.Minute)
+	if now.After(next18) {
+		next18 = next18.Add(24 * time.Hour)
+	}
+	durationUntil18 := next18.Sub(now)
+	log.Println("para las 18hs falta:", durationUntil18)
+
+	time.Sleep(durationUntil18)
+
+	for {
+
+		updateCuentasSos()
+
+		time.Sleep(24 * time.Hour)
+
+	}
+}
+
+// check stock values, and collect alephee prices with updateRumboPricesAlephee()
+func refreshPedidosProduccion() {
+	refreshInterval := time.Hour * 2 // Refresh the token every hour (adjust as needed)
+
+	for {
+		err := startUpdateFromTincho()
+		if err != nil {
+			log.Println("retrying. there was an error sending update start:", err)
+			time.Sleep(time.Minute)
+			err := startUpdateFromTincho()
+			if err != nil {
+				log.Println("there was an error sending update start:", err)
+			}
+		}
+
+		// Wait for the refresh interval
+		time.Sleep(refreshInterval)
+	}
+}
+
+type PedidosTincho struct {
+	RowNumber      string `json:"_RowNumber"`
+	NumeroPedido   string `json:"Nº PEDIDO"`
+	Vendedor       string `json:"VENDEDOR"`
+	Cliente        string `json:"CLIENTE"`
+	Equipo         string `json:"EQUIPO"`
+	QE             string `json:"Q/E"`
+	Observaciones  string `json:"OBSERVACIONES"`
+	FechaPedido    string `json:"F.PEDIDO"`
+	NumeroTactica  string `json:"N° TACTICA"`
+	Estado         string `json:"ESTADO"`
+	FechaTerminado string `json:"F.TERMINADO"`
+	NumeroDeSerie  string `json:"Nº DE SERIE"`
+	Updatecol      string `json:"updatecol"`
+}
+
+// Adds a movement in appsheet with the product_id, stock in each location, and movement_type
+func startUpdateFromTincho() error {
+
+	appsheet_id := "9c6e3ae5-ecda-406e-b3b1-402313be11ad"
+	appsheet_key := "V2-j5KTs-PIIpF-1LzTV-g2gcp-vZbwy-eFAVZ-RBCGB-k15Bs"
+
+	//*********************
+	//OBTENER TODAS LAS FILAS DEL EXCEL DE TINCHO
+
+	payload := `{
+		"Action": "Find",
+		"Properties": {
+			"Locale": "es-US",
+			"Timezone": "Argentina Standard Time"
+		},
+		"Rows": []
+		}`
+
+	// Create the request
+	requestURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/PEDIDOS 2022/Action", appsheet_id)
+	req, err := http.NewRequest(http.MethodPost, requestURL, bytes.NewBufferString(payload))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %v", err)
+	}
+
+	// Set request headers
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("ApplicationAccessKey", appsheet_key)
+
+	// Send the request
+	client := http.DefaultClient
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Check the response status code
+	if resp.StatusCode != http.StatusOK {
+		fmt.Println(payload)
+		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read response body: %v", err)
+	}
+
+	var response []PedidosTincho
+	err = json.Unmarshal(body, &response)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal response data: %v", err)
+	}
+
+	//*********************
+	//make the update
+
+	payload = `
+	{
+		"Action": "Edit",
+		"Properties": {},
+		"Rows": [`
+
+	for _, equipo := range response {
+
+		update, err := strconv.Atoi(equipo.Updatecol)
+		if err != nil {
+			return fmt.Errorf("failed to parse str to int: %v", err)
+		}
+
+		payload += fmt.Sprintf(
+			`{
+				"Nº PEDIDO": %s,
+				"updatecol": %d
+			},`, equipo.NumeroPedido, update+1)
+
+	}
+
+	payload = payload[:len(payload)-1] + "]}"
+
+	// Create the request
+	req, err = http.NewRequest(http.MethodPost, requestURL, bytes.NewBufferString(payload))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %v", err)
+	}
+
+	// Set request headers
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("ApplicationAccessKey", appsheet_key)
+
+	log.Println("actualizando excel de pedidos a producción interno")
+
+	// Send the request
+	client = http.DefaultClient
+	resp, err = client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Check the response status code
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != 504 {
+		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+	log.Println("excel de pedidos a producción interno actualizado")
+	return nil
 }

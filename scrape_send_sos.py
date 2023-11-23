@@ -341,6 +341,8 @@ def scrape_ventas(cuit):
                 "cuit":cuit
             }
 
+            if cae == "Error": continue
+
             payload_data.append(row_data)
 
 

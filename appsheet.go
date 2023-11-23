@@ -1,12 +1,213 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
+	"io"
 	"log"
+	"math/rand"
 	"net/http"
+	"os"
 	"strconv"
+	"strings"
 	"time"
 )
+
+type Publication struct {
+	ID        string `json:"id"`
+	Platform  string `json:"platform"`
+	Price     string `json:"price"`
+	Stock     string `json:"stock"`
+	SIVAPrice string `json:"siva_price"`
+	Cuenta    string `json:"sos_cuit"`
+	Producto  string `json:"product"`
+	SOSCode   string `json:"sos_code"`
+	IVA       string `json:"product_iva"`
+}
+
+func handlePublicationUpdate(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		log.Println("Invalid request method")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Parse the incoming request body
+	var publication Publication
+	if err := json.NewDecoder(r.Body).Decode(&publication); err != nil {
+		log.Println("error decoding payload:", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	log.Println("actualizando la publicacion", publication.ID,
+		"en", publication.Platform,
+		"stock y precio:", publication.Stock, publication.Price)
+
+	price_float, err := strconv.ParseFloat(publication.Price, 64)
+	if err != nil {
+		log.Println("error converting publication id to int:", err)
+		return
+	}
+
+	// si el precio es muy bajo, desactivamos la publicación con un stock 0
+	// salvo en alephee que siempre tiene los precios bien
+	if price_float < 1000 {
+		log.Println("error price under 1000:", publication.Price, "setting stock to 0")
+
+		if publication.Platform == "MELI" {
+
+			error := updateMeli(publication.ID, "", "0")
+			if error != "" {
+				log.Println("error updating product in meli:", error)
+			}
+
+		} else if publication.Platform == "ALEPHEE" {
+
+			error := updateAlephee(publication.ID, publication.Stock)
+			if error != "" {
+				log.Println("error updating stock in alephee:", error)
+			}
+
+		} else if publication.Platform == "WC" {
+
+			error := updateWC(publication.ID, "", "0")
+			if error != "" {
+				log.Println("error updating product in wc:", error)
+			}
+
+		} else if publication.Platform == "SOS" {
+		} else {
+			log.Println("no platform matched")
+		}
+
+		return
+	}
+
+	if publication.Platform == "MELI" {
+
+		error := updateMeli(publication.ID, publication.Price, publication.Stock)
+		if error != "" {
+			log.Println("error updating product in meli:", error)
+		}
+
+	} else if publication.Platform == "ALEPHEE" {
+
+		error := updateAlephee(publication.ID, publication.Stock)
+		if error != "" {
+			log.Println("error updating stock in alephee:", error)
+		}
+
+	} else if publication.Platform == "WC" {
+
+		error := updateWC(publication.ID, publication.Price, publication.Stock)
+		if error != "" {
+			log.Println("error updating product in wc:", error)
+		}
+
+	} else if publication.Platform == "SOS" {
+
+		error := updateSos(publication.SIVAPrice, publication.IVA, publication.ID, publication.Cuenta, publication.Producto, publication.SOSCode)
+		if error != "" {
+			log.Println("error updating product in sos:", error)
+		}
+
+	} else {
+		log.Println("no platform matched")
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+type PublicationRequest struct {
+	Publications string `json:"publications"`
+	ID           string `json:"id"`
+}
+
+// Recibe las publicaciones de un producto y updatea cada una en appsheet
+func handlePublicationRequest(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		log.Println("Invalid request method")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	var requestData PublicationRequest
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&requestData); err != nil {
+		log.Println("Failed to decode JSON request body:", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	log.Println("Producto actualizado: ", requestData.ID)
+	log.Println("Publicaciones:", requestData.Publications)
+
+	// Split the comma-separated codes into an array
+	codes := strings.Split(requestData.Publications, ",")
+
+	if codes[0] == "" {
+		return
+	}
+
+	// Initialize the payload with the common part
+	payload := `{
+		"Action": "Edit",
+		"Properties": {
+			"Locale": "es-US",
+			"Timezone": "Argentina Standard Time"
+		},
+		"Rows": [`
+
+	// Generate payload entries for each code
+	for _, code := range codes {
+		// Assuming you have a function to generate a random integer
+		randomNum := rand.Intn(1000000)
+		// Add an entry for the code and randomNum
+		payload += fmt.Sprintf(`{
+			"id" : "%s",
+			"updatecol" : "%d"
+		},`, strings.TrimSpace(code), randomNum)
+	}
+
+	// Complete the payload
+	payload = payload[:len(payload)-1]
+	payload += `]}`
+
+	// Create the request
+
+	requestURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/platforms/Action", os.Getenv("appsheet_id"))
+	key := os.Getenv("appsheet_key")
+	req, err := http.NewRequest(http.MethodPost, requestURL, bytes.NewBufferString(payload))
+	if err != nil {
+		log.Printf("failed to create request for appsheet: %v", err)
+		return
+	}
+
+	// Set request headers
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("ApplicationAccessKey", key)
+
+	// Send the request
+	client := http.DefaultClient
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("failed to send request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Check the response status code
+	if resp.StatusCode != http.StatusOK {
+		// Read and log the error response body
+		errorBody, _ := io.ReadAll(resp.Body)
+		log.Println(payload)
+		log.Printf("handle publication request unexpected status code from appsheet: %s", errorBody)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
 
 // handleASMovementWebhook receives a product_id which stock has been modified
 // Then the function obtains the product stock in Oran, calculates the configured product stock margin

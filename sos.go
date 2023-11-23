@@ -6,9 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"strings"
+	"time"
 )
 
 type SOSResponse struct {
@@ -567,7 +570,6 @@ func getSosId(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Success"))
-	return
 }
 
 func updateSos(price, iva, id, cuenta, producto, codigo string) string {
@@ -617,4 +619,48 @@ func updateSos(price, iva, id, cuenta, producto, codigo string) string {
 		return "error updating product in sos: " + string(errorBody)
 	}
 
+}
+
+func updateCuentasSos() {
+	log.Println("starting to update data from sos")
+
+	pythonScript := "scrape_send_sos.py"
+
+	maxRetries := 3
+	var retries int
+
+	for {
+
+		cmd := exec.Command("python3", pythonScript)
+
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			log.Printf("error running the python script: %v\n", err)
+
+			// Print the full error message
+			log.Printf("Python script error output: %s\n", string(out))
+
+			if retries < maxRetries {
+				log.Println("retrying...")
+				retries++
+				time.Sleep(time.Minute)
+			} else {
+				log.Println("max retries reached. giving up.")
+				return
+			}
+		} else {
+			log.Printf("%s\n", string(out))
+			return
+		}
+	}
+
+}
+
+func updateCuentasSosWeb(w http.ResponseWriter, r *http.Request) {
+
+	fmt.Fprintf(w, "UPDATING FROM SOS")
+
+	w.WriteHeader(http.StatusOK)
+
+	updateCuentasSos()
 }

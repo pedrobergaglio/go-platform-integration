@@ -277,7 +277,6 @@ func main() {
 		if err != nil {
 			log.Printf("failed to create request: %v", err)
 			return
-
 		}
 
 		// Set request headers
