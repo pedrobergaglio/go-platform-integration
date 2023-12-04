@@ -1,6 +1,5 @@
 package main
 
-/*
 import (
 	"bytes"
 	"encoding/json"
@@ -11,8 +10,6 @@ import (
 	"os"
 	"strconv"
 	"time"
-
-	"github.com/spf13/viper"
 )
 
 type AlepheePriceResponse struct {
@@ -34,6 +31,7 @@ type Price struct {
 	FinalPriceWithShippingCost float64 `json:"FinalPriceWithShippingCost"`
 }
 
+/*
 // Converts a number or string into string
 func convertToString(value interface{}) string {
 	switch v := value.(type) {
@@ -46,7 +44,7 @@ func convertToString(value interface{}) string {
 	}
 }
 func loadConfig() {
-	viper.SetConfigFile(".env") // Set the path to your configuration file
+	viper.SetConfigFile("resources/.env") // Set the path to your configuration file
 	viper.SetConfigType("env")
 	// Specify the configuration file type (e.g., "env", "json", "yaml", etc.)
 
@@ -62,11 +60,11 @@ func loadConfig() {
 			log.Fatalf("failed to set environment variable %s: %s", key, err)
 		}
 	}
-}
+}*/
 
 // updateRumboPricesAlephee gets all the products in appsheet linked to alephee
 // For each product, gets the price in alephee, and then updates it in appsheet.
-func main() {
+func mainn() {
 	loadConfig()
 
 	log.Println("updating rumbo prices from alephee")
@@ -298,7 +296,7 @@ func main() {
 			continue
 		}
 
-		log.Println(item.ID, "done")
+		//log.Println(item.ID, "done")
 
 	}
 

@@ -585,11 +585,11 @@ func refreshPedidosProduccion() {
 	refreshInterval := time.Hour * 2 // Refresh the token every hour (adjust as needed)
 
 	for {
-		err := startUpdateFromTincho()
+		err := refreshPedidosProduccionFunc()
 		if err != nil {
 			log.Println("retrying. there was an error sending update start:", err)
 			time.Sleep(time.Minute)
-			err := startUpdateFromTincho()
+			err := refreshPedidosProduccionFunc()
 			if err != nil {
 				log.Println("there was an error sending update start:", err)
 			}
@@ -617,10 +617,10 @@ type PedidosTincho struct {
 }
 
 // Adds a movement in appsheet with the product_id, stock in each location, and movement_type
-func startUpdateFromTincho() error {
+func refreshPedidosProduccionFunc() error {
 
-	appsheet_id := "9c6e3ae5-ecda-406e-b3b1-402313be11ad"
-	appsheet_key := "V2-j5KTs-PIIpF-1LzTV-g2gcp-vZbwy-eFAVZ-RBCGB-k15Bs"
+	appsheet_id := "970ce665-46a8-4c61-87fa-1e7ea7211db8"
+	appsheet_key := "V2-OhxkI-pPuLC-MW362-Bzj0Q-FtTd0-RCJq8-RXZpD-DXDDa"
 
 	//*********************
 	//OBTENER TODAS LAS FILAS DEL EXCEL DE TINCHO
@@ -629,13 +629,14 @@ func startUpdateFromTincho() error {
 		"Action": "Find",
 		"Properties": {
 			"Locale": "es-US",
-			"Timezone": "Argentina Standard Time"
+			"Timezone": "Argentina Standard Time",
+			"Selector": 'Filter(PEDIDOS AÑO ACTUAL, ISNOTBLANK([N° TACTICA]))',
 		},
 		"Rows": []
 		}`
 
 	// Create the request
-	requestURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/PEDIDOS 2022/Action", appsheet_id)
+	requestURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/PEDIDOS AÑO ACTUAL/Action", appsheet_id)
 	req, err := http.NewRequest(http.MethodPost, requestURL, bytes.NewBufferString(payload))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %v", err)
@@ -664,39 +665,19 @@ func startUpdateFromTincho() error {
 		return fmt.Errorf("failed to read response body: %v", err)
 	}
 
-	var response []PedidosTincho
-	err = json.Unmarshal(body, &response)
-	if err != nil {
-		return fmt.Errorf("failed to unmarshal response data: %v", err)
-	}
+	// Convert the response body to a string
+	responseString := string(body)
 
-	//*********************
-	//make the update
-
-	payload = `
+	// Make the update
+	payload = fmt.Sprintf(`
 	{
-		"Action": "Edit",
+		"Action": "Add",
 		"Properties": {},
-		"Rows": [`
-
-	for _, equipo := range response {
-
-		update, err := strconv.Atoi(equipo.Updatecol)
-		if err != nil {
-			return fmt.Errorf("failed to parse str to int: %v", err)
-		}
-
-		payload += fmt.Sprintf(
-			`{
-				"Nº PEDIDO": %s,
-				"updatecol": %d
-			},`, equipo.NumeroPedido, update+1)
-
-	}
-
-	payload = payload[:len(payload)-1] + "]}"
+		"Rows": %s
+	}`, responseString)
 
 	// Create the request
+	requestURL = fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/EQUIPOS PEDIDOS INTERNA/Action", appsheet_id)
 	req, err = http.NewRequest(http.MethodPost, requestURL, bytes.NewBufferString(payload))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %v", err)
@@ -718,8 +699,166 @@ func startUpdateFromTincho() error {
 
 	// Check the response status code
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != 504 {
+		fmt.Println(payload)
+		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+	//********************************************************************************
+
+	//*********************
+	//OBTENER TODAS LAS FILAS INTERNAS QUE NO ESTÁN EN EL EXCEL DE TINCHO Y ELIMINARLAS
+
+	payload = `{
+		"Action": "Find",
+		"Properties": {
+			"Locale": "es-US",
+			"Timezone": "Argentina Standard Time",
+			"Selector": 'Filter(EQUIPOS PEDIDOS INTERNA, NOT(IN([Nº PEDIDO], PEDIDOS AÑO ACTUAL[Nº PEDIDO])))',
+		},
+		"Rows": []
+		}`
+
+	// Create the request
+	requestURL = fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/EQUIPOS PEDIDOS INTERNA/Action", appsheet_id)
+	req, err = http.NewRequest(http.MethodPost, requestURL, bytes.NewBufferString(payload))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %v", err)
+	}
+
+	// Set request headers
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("ApplicationAccessKey", appsheet_key)
+
+	// Send the request
+	client = http.DefaultClient
+	resp, err = client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Check the response status code
+	if resp.StatusCode != http.StatusOK {
+		fmt.Println(payload)
+		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	body, err = io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read response body: %v", err)
+	}
+
+	// Convert the response body to a string
+	responseString = string(body)
+
+	// Make the update
+	payload = fmt.Sprintf(`
+	{
+		"Action": "Delete",
+		"Properties": {},
+		"Rows": %s
+	}`, responseString)
+
+	// Create the request
+	requestURL = fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/EQUIPOS PEDIDOS INTERNA/Action", appsheet_id)
+	req, err = http.NewRequest(http.MethodPost, requestURL, bytes.NewBufferString(payload))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %v", err)
+	}
+
+	// Set request headers
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("ApplicationAccessKey", appsheet_key)
+
+	log.Println("eliminando filas internas que no están en el excel de tincho")
+
+	// Send the request
+	client = http.DefaultClient
+	resp, err = client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Check the response status code
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != 504 {
+		fmt.Println(payload)
 		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 	log.Println("excel de pedidos a producción interno actualizado")
+	//********************************************************************************
+
+	return nil
+}
+
+// check stock values, and collect alephee prices with updateRumboPricesAlephee()
+func refreshResumenBanco() {
+	refreshInterval := time.Hour * 2 // Refresh the token every hour (adjust as needed)
+
+	for {
+
+		fmt.Println("updating resumen formulas")
+
+		err := sendUpdateBanco()
+		if err != nil {
+			log.Println("retrying. there was an error sending update start:", err)
+			time.Sleep(time.Minute)
+			err := sendUpdateBanco()
+			if err != nil {
+				log.Println("there was an error sending update start:", err)
+			}
+		}
+
+		// Wait for the refresh interval
+		time.Sleep(refreshInterval)
+	}
+}
+
+// Adds a movement in appsheet with the product_id, stock in each location, and movement_type
+func sendUpdateBanco() error {
+
+	appsheet_id := "acf512aa-6952-4aaf-8d17-c200fefa116b"
+	appsheet_key := "V2-RIUo6-uKEV7-puGvy-TeVYT-K2ag9-85j8j-6IaP2-ZX7Rr"
+
+	//*********************
+	//SEND UPDATE
+
+	payload := `{
+		"Action": "Actualizar3",
+		"Properties": {
+			"Locale": "es-US",
+			"Timezone": "Argentina Standard Time"
+		},
+		"Rows": [
+			{
+				"ID": "hola"
+			}
+		]
+		}`
+
+	// Create the request
+	requestURL := fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/RESUMEN/Action", appsheet_id)
+	req, err := http.NewRequest(http.MethodPost, requestURL, bytes.NewBufferString(payload))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %v", err)
+	}
+
+	// Set request headers
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("ApplicationAccessKey", appsheet_key)
+
+	// Send the request
+	client := http.DefaultClient
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Check the response status code
+	if resp.StatusCode != http.StatusOK {
+		fmt.Println(payload)
+		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
 	return nil
 }
