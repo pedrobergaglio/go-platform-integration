@@ -190,7 +190,7 @@ func updateUsdPrices() {
 		{
 			"Action": "Edit",
 			"Properties": {
-				"Locale": "es-US",
+				"Locale": "en-US",
 				"Timezone": "Argentina Standard Time"
 			},
 			"Rows": [
@@ -623,14 +623,14 @@ func refreshPedidosProduccionFunc() error {
 	appsheet_key := "V2-OhxkI-pPuLC-MW362-Bzj0Q-FtTd0-RCJq8-RXZpD-DXDDa"
 
 	//*********************
-	//OBTENER TODAS LAS FILAS DEL EXCEL DE TINCHO
+	//OBTENER TODAS LAS FILAS DEL EXCEL DE TINCHO QUE ESTAN EN LA INTERNA Y ACTUALIZARLO
 
 	payload := `{
 		"Action": "Find",
 		"Properties": {
-			"Locale": "es-US",
+			"Locale": "en-US",
 			"Timezone": "Argentina Standard Time",
-			"Selector": 'Filter(PEDIDOS AÑO ACTUAL, ISNOTBLANK([N° TACTICA]))',
+			"Selector": 'Filter(PEDIDOS AÑO ACTUAL, AND(ISNOTBLANK([N° TACTICA]), IN([Nº PEDIDO], EQUIPOS PEDIDOS INTERNA[Nº PEDIDO])))',
 		},
 		"Rows": []
 		}`
@@ -671,8 +671,8 @@ func refreshPedidosProduccionFunc() error {
 	// Make the update
 	payload = fmt.Sprintf(`
 	{
-		"Action": "Add",
-		"Properties": {},
+		"Action": "Edit",
+		"Properties": {"Locale": "en-US"},
 		"Rows": %s
 	}`, responseString)
 
@@ -702,6 +702,88 @@ func refreshPedidosProduccionFunc() error {
 		fmt.Println(payload)
 		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
+
+	//*********************
+	//OBTENER TODAS LAS FILAS DEL EXCEL DE TINCHO QUE NO ESTAN EN LA INTERNA Y AGREGARLAS
+
+	payload = `{
+		"Action": "Find",
+		"Properties": {
+			"Locale": "en-US",
+			"Timezone": "Argentina Standard Time",
+			"Selector": 'Filter(PEDIDOS AÑO ACTUAL, AND(ISNOTBLANK([N° TACTICA]), NOT(IN([Nº PEDIDO], EQUIPOS PEDIDOS INTERNA[Nº PEDIDO]))))',
+		},
+		"Rows": []
+		}`
+
+	// Create the request
+	requestURL = fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/PEDIDOS AÑO ACTUAL/Action", appsheet_id)
+	req, err = http.NewRequest(http.MethodPost, requestURL, bytes.NewBufferString(payload))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %v", err)
+	}
+
+	// Set request headers
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("ApplicationAccessKey", appsheet_key)
+
+	// Send the request
+	client = http.DefaultClient
+	resp, err = client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Check the response status code
+	if resp.StatusCode != http.StatusOK {
+		fmt.Println(payload)
+		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	body, err = io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read response body: %v", err)
+	}
+
+	// Convert the response body to a string
+	responseString = string(body)
+
+	// Make the update
+	payload = fmt.Sprintf(`
+	{
+		"Action": "Add",
+		"Properties": {"Locale": "en-US"},
+		"Rows": %s
+	}`, responseString)
+
+	// Create the request
+	requestURL = fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/EQUIPOS PEDIDOS INTERNA/Action", appsheet_id)
+	req, err = http.NewRequest(http.MethodPost, requestURL, bytes.NewBufferString(payload))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %v", err)
+	}
+
+	// Set request headers
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("ApplicationAccessKey", appsheet_key)
+
+	log.Println("agregando filas al excel de pedidos a producción interno")
+
+	// Send the request
+	client = http.DefaultClient
+	resp, err = client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Check the response status code
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != 504 {
+		fmt.Println(payload)
+		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
 	//********************************************************************************
 
 	//*********************
@@ -710,7 +792,7 @@ func refreshPedidosProduccionFunc() error {
 	payload = `{
 		"Action": "Find",
 		"Properties": {
-			"Locale": "es-US",
+			"Locale": "en-US",
 			"Timezone": "Argentina Standard Time",
 			"Selector": 'Filter(EQUIPOS PEDIDOS INTERNA, NOT(IN([Nº PEDIDO], PEDIDOS AÑO ACTUAL[Nº PEDIDO])))',
 		},
@@ -754,7 +836,7 @@ func refreshPedidosProduccionFunc() error {
 	payload = fmt.Sprintf(`
 	{
 		"Action": "Delete",
-		"Properties": {},
+		"Properties": {"Locale": "en-US"},
 		"Rows": %s
 	}`, responseString)
 
@@ -825,7 +907,7 @@ func sendUpdateBanco() error {
 	payload := `{
 		"Action": "Actualizar3",
 		"Properties": {
-			"Locale": "es-US",
+			"Locale": "en-US",
 			"Timezone": "Argentina Standard Time"
 		},
 		"Rows": [
