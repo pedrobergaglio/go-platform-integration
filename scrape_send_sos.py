@@ -16,6 +16,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.support.ui import Select
 import datetime
 
 # Get the current date
@@ -626,6 +627,194 @@ def update():
         print(response.text)
         errorflag = False
 
+def login_afip():
+
+    # Define your URL, username, and password
+    afip_username = "20180595733"
+    afip_password = "EgMrGi2023"
+
+    try:
+        driver.get("https://ctacte.cloud.afip.gob.ar/contribuyente/externo")
+
+        username_input = driver.find_element(By.ID, "F1:username")
+        username_input.send_keys(afip_username)
+        driver.find_element(By.ID, "F1:btnSiguiente").click()
+        driver.implicitly_wait(carga)
+        password_input = driver.find_element(By.ID, "F1:password")
+        password_input.send_keys(afip_password)
+        login_button = driver.find_element(By.ID, "F1:btnIngresar")
+        login_button.click()
+
+        driver.implicitly_wait(carga)
+        
+    except NoSuchElementException as e:
+        print(f"Element not found: {e}")
+        error_flag = False
+    except TimeoutException as e:
+        print(f"Timeout error: {e}")
+        error_flag = False
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        error_flag = False
+
+def acceso_sistema_de_cuentas():
+    # Call the login function to authenticate
+    driver.get("https://portalcf.cloud.afip.gob.ar/portal/app/" )
+    
+    # Wait for the page to load after login 
+    driver.implicitly_wait(carga)
+
+    # VER TODOS
+    #servicios = driver.find_element(By.CLASS_NAME, "row panels-row m-x-0")
+    driver.find_element(By.CSS_SELECTOR,  "#serviciosMasUtilizados > div > div > div > div:nth-child(5) > div > a").click()
+    driver.implicitly_wait(carga)
+
+    time.sleep(carga)
+
+    # CONTAINER SERVICIOS
+    #container = driver.find_element(By.CSS_SELECTOR, "#root > div > main > div > section > div > div.row.panels-row")
+
+    # CONTAINER SERVICIOS
+    container = driver.find_element(By.CSS_SELECTOR, "#root > div > main > div > section > div > div.row.panels-row")
+
+    # Use WebDriverWait to wait for the container to be present
+    wait = WebDriverWait(driver, 10)
+    container = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "#root > div > main > div > section > div > div.row.panels-row")))
+
+    #print(container.get_attribute("outerHTML"))
+    servicios = container.find_elements(By.CSS_SELECTOR, "div.col-xs-12.col-sm-6.col-md-4")
+
+    counter = 0
+
+    # Iterate through rows
+    for servicio in servicios:
+
+        counter += 1
+            # Find the h3 element within each row
+        h3_element = servicio.find_element(By.TAG_NAME, "h3")
+
+        # Get the text content of the h3 element
+        h3_text = h3_element.text
+
+        # Check if the text is "Aceptación de Datos Biométricos"
+        if h3_text == "SISTEMA DE CUENTAS TRIBUTARIAS":
+            print("Found SISTEMA DE CUENTAS TRIBUTARIAS")
+
+            notfound = False
+
+            # Scroll into view using JavaScript
+            driver.execute_script("arguments[0].scrollIntoView();", servicio)
+
+            # Click the element
+            # Click the element using JavaScript
+            driver.execute_script("arguments[0].click();", servicio)
+            return
+    
+    if notfound: print("SISTEMA DE CUENTAS TRIBUTARIAS no encontrado"); error_flag = False
+
+def scrape_deudas():
+
+    driver.implicitly_wait(carga)
+
+    # Call the login function to authenticate
+    driver.get("https://ctacte.cloud.afip.gob.ar/contribuyente/externo" )
+    
+    # Wait for the page to load after login 
+    driver.implicitly_wait(carga)
+     
+    # Assuming the dropdown is inside an element with id "cuitForm"
+    dropdown_element = driver.find_element(By.ID, "cuitForm")
+
+    # Create a Select object from the dropdown element
+    dropdown = Select(dropdown_element.find_element(By.TAG_NAME, "select"))
+
+    # Specify the target value
+    target_value = "30716503387"
+
+    # Iterate through all options in the dropdown
+    for option in dropdown.options:
+        # Check if the option's value matches the target value
+        if option.text == target_value:
+            # Select the option
+            dropdown.select_by_visible_text(target_value)
+            break  # Exit the loop once the target option is found
+
+    value_element = WebDriverWait(driver, 10).until(
+    EC.presence_of_element_located((By.CSS_SELECTOR, '.text-control input[name="text"]'))
+    )
+
+    # Now, retrieve the text value
+    value = value_element.get_attribute('value')
+
+    #take out the first two characters, and replace . with nothing, then , with ., then print
+    value = value[2:].replace('.', '').replace(',', '.')
+    itec_deuda = float(value)
+
+    # Assuming the dropdown is inside an element with id "cuitForm"
+    dropdown_element = driver.find_element(By.ID, "cuitForm")
+
+    # Create a Select object from the dropdown element
+    dropdown = Select(dropdown_element.find_element(By.TAG_NAME, "select"))
+
+    # Specify the target value
+    target_value = "30710746997"
+
+    # Iterate through all options in the dropdown
+    for option in dropdown.options:
+        # Check if the option's value matches the target value
+        if option.text == target_value:
+            # Select the option
+            dropdown.select_by_visible_text(target_value)
+            break  # Exit the loop once the target option is found
+
+    value_element = WebDriverWait(driver, 10).until(
+    EC.presence_of_element_located((By.CSS_SELECTOR, '.text-control input[name="text"]'))
+    )
+
+    # Now, retrieve the text value
+    value = value_element.get_attribute('value')
+
+    #take out the first two characters, and replace . with nothing, then , with ., then print
+    value = value[2:].replace('.', '').replace(',', '.')
+    eg_deuda = float(value)
+
+    
+    # Build the payload with all row data
+    payload = {
+        "Action": "Edit",
+        "Properties": {
+            "Locale": "en-US",
+            "Timezone": "Argentina Standard Time"
+        },
+        "Rows": [{
+            "ID": "hola",
+            "ITEC DEUDA AFIP": itec_deuda,
+            "ENERGÍA DEUDA AFIP": eg_deuda
+        }]
+    }
+
+    #print(payload)
+
+    # Define the request URL
+    requestURL = f"https://api.appsheet.com/api/v2/apps/{appsheet_id}/tables/RESUMEN/Action"
+
+    # Set request headers
+    headers = {
+        "Content-Type": "application/json",
+        "ApplicationAccessKey": appsheet_key
+    }
+
+    # Send the request
+    response = requests.post(requestURL, data=json.dumps(payload), headers=headers)
+
+    # Check the response status code
+    if response.status_code != 200:
+        print(f"Request failed with status code: {response.status_code}")
+        print(response.text)
+        errorflag = False
+
+
+
 
 truncate()
 login()
@@ -643,9 +832,25 @@ scrape_ventas("ITEC")
 scrape_proveedores("ITEC")
 scrape_compras("ITEC")
 
-update()
+update() 
+
+login_afip()
+scrape_deudas()
+
 
 if error_flag:
-        print("success: sos data updated")
+        print("success: data scraped and updated")
 
 driver.quit()
+
+
+"""
+
+"SELECT(CAJA CENTRAL[SALDO ACUM], [FECHA]=MAXROW("CAJA CENTRAL", "FECHA"))"
+
+"ANY(SELECT(CAJA CENTRAL[SALDO ACUM], [FECHA]=MAXROW("CAJA CENTRAL", "FECHA", and(ISNOTBLANK([SALDO ACUM]), [SALDO ACUM]<>0))))"
+
+SELECCIONA EL SALDO DE LA FILA CON LA FECHA MAS ALTA CON UN SALDO 
+EN LA CAJA CENTRAL
+
+"""

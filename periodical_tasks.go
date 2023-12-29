@@ -582,7 +582,7 @@ func updateSosAt18() {
 
 // check stock values, and collect alephee prices with updateRumboPricesAlephee()
 func refreshPedidosProduccion() {
-	refreshInterval := time.Hour * 2 // Refresh the token every hour (adjust as needed)
+	refreshInterval := time.Minute * 20 // Refresh the token every hour (adjust as needed)
 
 	for {
 		err := refreshPedidosProduccionFunc()
@@ -630,7 +630,7 @@ func refreshPedidosProduccionFunc() error {
 		"Properties": {
 			"Locale": "en-US",
 			"Timezone": "Argentina Standard Time",
-			"Selector": 'Filter(PEDIDOS AÑO ACTUAL, AND(ISNOTBLANK([N° TACTICA]), IN([Nº PEDIDO], EQUIPOS PEDIDOS INTERNA[Nº PEDIDO])))',
+			"Selector": 'Filter(PEDIDOS AÑO ACTUAL, AND(OR(ISNOTBLANK([N° TACTICA]), ISNOTBLANK([CLIENTE])), IN([Nº PEDIDO], EQUIPOS PEDIDOS INTERNA[Nº PEDIDO])))',
 		},
 		"Rows": []
 		}`
@@ -711,7 +711,7 @@ func refreshPedidosProduccionFunc() error {
 		"Properties": {
 			"Locale": "en-US",
 			"Timezone": "Argentina Standard Time",
-			"Selector": 'Filter(PEDIDOS AÑO ACTUAL, AND(ISNOTBLANK([N° TACTICA]), NOT(IN([Nº PEDIDO], EQUIPOS PEDIDOS INTERNA[Nº PEDIDO]))))',
+			"Selector": 'Filter(PEDIDOS AÑO ACTUAL, AND(OR(ISNOTBLANK([N° TACTICA]), ISNOTBLANK([CLIENTE])), NOT(IN([Nº PEDIDO], EQUIPOS PEDIDOS INTERNA[Nº PEDIDO]))))',
 		},
 		"Rows": []
 		}`

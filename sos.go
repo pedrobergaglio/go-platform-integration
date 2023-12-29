@@ -622,7 +622,7 @@ func updateSos(price, iva, id, cuenta, producto, codigo string) string {
 }
 
 func updateCuentasSos() {
-	log.Println("starting to update data from sos")
+	log.Println("starting to update financial data with scraper")
 
 	pythonScript := "scrape_send_sos.py"
 
@@ -658,7 +658,7 @@ func updateCuentasSos() {
 
 func updateCuentasSosWeb(w http.ResponseWriter, r *http.Request) {
 
-	fmt.Fprintf(w, "UPDATING FROM SOS")
+	fmt.Fprintf(w, "UPDATING WITH SCRAPER")
 
 	w.WriteHeader(http.StatusOK)
 
