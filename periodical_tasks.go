@@ -705,8 +705,8 @@ func refreshPedidosProduccionFunc() error {
 
 	//*********************
 	//OBTENER TODAS LAS FILAS DEL EXCEL DE TINCHO QUE NO ESTAN EN LA INTERNA Y AGREGARLAS
-	/*
-		payload = `{
+
+	payload = `{
 			"Action": "Find",
 			"Properties": {
 				"Locale": "en-US",
@@ -716,74 +716,74 @@ func refreshPedidosProduccionFunc() error {
 			"Rows": []
 			}`
 
-		// Create the request
-		requestURL = fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/PEDIDOS AÑO ACTUAL/Action", appsheet_id)
-		req, err = http.NewRequest(http.MethodPost, requestURL, bytes.NewBufferString(payload))
-		if err != nil {
-			return fmt.Errorf("failed to create request: %v", err)
-		}
+	// Create the request
+	requestURL = fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/PEDIDOS AÑO ACTUAL/Action", appsheet_id)
+	req, err = http.NewRequest(http.MethodPost, requestURL, bytes.NewBufferString(payload))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %v", err)
+	}
 
-		// Set request headers
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("ApplicationAccessKey", appsheet_key)
+	// Set request headers
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("ApplicationAccessKey", appsheet_key)
 
-		// Send the request
-		client = http.DefaultClient
-		resp, err = client.Do(req)
-		if err != nil {
-			return fmt.Errorf("failed to send request: %v", err)
-		}
-		defer resp.Body.Close()
+	// Send the request
+	client = http.DefaultClient
+	resp, err = client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send request: %v", err)
+	}
+	defer resp.Body.Close()
 
-		// Check the response status code
-		if resp.StatusCode != http.StatusOK {
-			fmt.Println(payload)
-			return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-		}
+	// Check the response status code
+	if resp.StatusCode != http.StatusOK {
+		fmt.Println(payload)
+		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
 
-		body, err = io.ReadAll(resp.Body)
-		if err != nil {
-			return fmt.Errorf("failed to read response body: %v", err)
-		}
+	body, err = io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read response body: %v", err)
+	}
 
-		// Convert the response body to a string
-		responseString = string(body)
+	// Convert the response body to a string
+	responseString = string(body)
 
-		// Make the update
-		payload = fmt.Sprintf(`
+	// Make the update
+	payload = fmt.Sprintf(`
 		{
 			"Action": "Add",
 			"Properties": {"Locale": "en-US"},
 			"Rows": %s
 		}`, responseString)
 
-		// Create the request
-		requestURL = fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/EQUIPOS PEDIDOS INTERNA/Action", appsheet_id)
-		req, err = http.NewRequest(http.MethodPost, requestURL, bytes.NewBufferString(payload))
-		if err != nil {
-			return fmt.Errorf("failed to create request: %v", err)
-		}
+	// Create the request
+	requestURL = fmt.Sprintf("https://api.appsheet.com/api/v2/apps/%s/tables/EQUIPOS PEDIDOS INTERNA/Action", appsheet_id)
+	req, err = http.NewRequest(http.MethodPost, requestURL, bytes.NewBufferString(payload))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %v", err)
+	}
 
-		// Set request headers
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("ApplicationAccessKey", appsheet_key)
+	// Set request headers
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("ApplicationAccessKey", appsheet_key)
 
-		log.Println("agregando filas al excel de pedidos a producción interno")
+	log.Println("agregando filas al excel de pedidos a producción interno")
 
-		// Send the request
-		client = http.DefaultClient
-		resp, err = client.Do(req)
-		if err != nil {
-			return fmt.Errorf("failed to send request: %v", err)
-		}
-		defer resp.Body.Close()
+	// Send the request
+	client = http.DefaultClient
+	resp, err = client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send request: %v", err)
+	}
+	defer resp.Body.Close()
 
-		// Check the response status code
-		if resp.StatusCode != http.StatusOK && resp.StatusCode != 504 {
-			fmt.Println(payload)
-			return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-		}
-	*/
+	// Check the response status code
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != 504 {
+		fmt.Println(payload)
+		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
 	//********************************************************************************
 
 	//*********************
