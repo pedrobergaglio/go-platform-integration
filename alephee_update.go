@@ -1,17 +1,5 @@
 package main
 
-import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"io"
-	"log"
-	"net/http"
-	"os"
-	"strconv"
-	"time"
-)
-
 type AlepheePriceResponse struct {
 	TotalItemsRetrieved int          `json:"Total"`
 	Results             []ResultItem `json:"Results"`
@@ -60,7 +48,7 @@ func loadConfig() {
 			log.Fatalf("failed to set environment variable %s: %s", key, err)
 		}
 	}
-}*/
+}
 
 // updateRumboPricesAlephee gets all the products in appsheet linked to alephee
 // For each product, gets the price in alephee, and then updates it in appsheet.
@@ -361,4 +349,5 @@ func updateAlephee(alephee_id string, stock interface{}) string {
 
 	return ""
 }
+
 */

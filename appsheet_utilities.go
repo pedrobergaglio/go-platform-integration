@@ -9,7 +9,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/spf13/viper"
@@ -240,6 +239,7 @@ type PlatformsData struct {
 	MeliPriceMargin string `json:"meli_price_margin"`
 }
 
+/*
 // Returns the StockMargin, AlepheeID, MeliID, WCID based on a product_id
 func getPlatformsID(product_id string) ([]PlatformsData, string) {
 
@@ -314,3 +314,4 @@ func getPlatformsID(product_id string) ([]PlatformsData, string) {
 	return ProductPlatformsData, ""
 
 }
+*/

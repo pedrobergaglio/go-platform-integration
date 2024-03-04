@@ -29,7 +29,7 @@ type TokenResponse struct {
 // refreshMeliToken function gets the last given refresh token to get a new access token
 func refreshMeliToken() error {
 
-	refreshToken := os.Getenv("meli_refresh_token")
+	refreshToken := os.Getenv("meli_refresh_token_eg")
 
 	// Define the request URL and payload
 	url := "https://api.mercadolibre.com/oauth/token"
@@ -75,17 +75,74 @@ func refreshMeliToken() error {
 		return errors.New("empty variables returned")
 	}
 
-	err = os.Setenv("MELI_ACCESS_TOKEN", tokenResponse.AccessToken)
+	err = os.Setenv("MELI_ACCESS_TOKEN_EG", tokenResponse.AccessToken)
 	if err != nil {
 		return err
 	}
 
-	err = os.Setenv("MELI_REFRESH_TOKEN", tokenResponse.RefreshToken)
+	err = os.Setenv("MELI_REFRESH_TOKEN_EG", tokenResponse.RefreshToken)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("meli refresh token:", tokenResponse.RefreshToken, "meli access token:", tokenResponse.AccessToken)
+	fmt.Println("meli eg refresh token:", tokenResponse.RefreshToken, "meli eg access token:", tokenResponse.AccessToken)
+
+	refreshToken = os.Getenv("meli_refresh_token_itec")
+
+	// Define the request URL and payload
+	url = "https://api.mercadolibre.com/oauth/token"
+	payload = fmt.Sprintf(`{
+		"grant_type": "refresh_token",
+		"client_id": "1281999416384943",
+		"client_secret": "IiNbH7wGtF1kmzFKNgD7cHMroMWKQ8Cv",
+		"refresh_token": "%s"
+	}`, refreshToken)
+
+	// Create the HTTP request
+	req, err = http.NewRequest(http.MethodPost, url, bytes.NewBufferString(payload))
+	if err != nil {
+		return err
+	}
+
+	// Set the request headers
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	// Send the request
+	client = http.DefaultClient
+	resp, err = client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	// Read the response body
+	body, err = io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	// Unmarshal the JSON response into a TokenResponse struct
+	err = json.Unmarshal(body, &tokenResponse)
+	if err != nil {
+		return err
+	}
+
+	if tokenResponse.AccessToken == "" || tokenResponse.RefreshToken == "" {
+		return errors.New("empty variables returned")
+	}
+
+	err = os.Setenv("MELI_ACCESS_TOKEN_ITEC", tokenResponse.AccessToken)
+	if err != nil {
+		return err
+	}
+
+	err = os.Setenv("MELI_REFRESH_TOKEN_ITEC", tokenResponse.RefreshToken)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("meli itec refresh token:", tokenResponse.RefreshToken, "meli itec access token:", tokenResponse.AccessToken)
 
 	return nil
 }

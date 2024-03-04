@@ -11,7 +11,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 )
 
 type Publication struct {
@@ -58,7 +57,7 @@ func handlePublicationUpdate(w http.ResponseWriter, r *http.Request) {
 
 		if publication.Platform == "MELI" {
 
-			error := updateMeli(publication.ID, "", "0")
+			error := updateMeli(publication.ID, "", "0", publication.Cuenta)
 			if error != "" {
 				log.Println("error updating product in meli:", error)
 			}
@@ -87,7 +86,7 @@ func handlePublicationUpdate(w http.ResponseWriter, r *http.Request) {
 
 	if publication.Platform == "MELI" {
 
-		error := updateMeli(publication.ID, publication.Price, publication.Stock)
+		error := updateMeli(publication.ID, publication.Price, publication.Stock, publication.Cuenta)
 		if error != "" {
 			log.Println("error updating product in meli:", error)
 		}
@@ -216,6 +215,7 @@ type ASProductIDWebhookPayload struct {
 	ProductID string `json:"product_id"`
 }
 
+/*
 func handleASMovementWebhook(w http.ResponseWriter, r *http.Request) {
 	// Ensure that the request method is POST
 	if r.Method != http.MethodPost {
@@ -424,6 +424,7 @@ func handleASPriceWebhook(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("webhook processed successfully"))
 		log.Println("price updated")
-	}*/
+	}
 
 }
+*/

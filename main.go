@@ -51,6 +51,7 @@ func main() {
 	http.HandleFunc("/product", handlePublicationRequest)
 	http.HandleFunc("/sos", getSosId)
 	http.HandleFunc("/cuentas-sos", updateCuentasSosWeb)
+	http.HandleFunc("/resultados", updateHistorialResultados2)
 
 	// Root route handler
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

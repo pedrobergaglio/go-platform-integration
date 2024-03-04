@@ -2,8 +2,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -16,7 +14,7 @@ type Notification struct {
 	OrderIDLink string `json:"resource"`
 }
 
-type orderData struct {
+type OrderData struct {
 	OrderItems []OrderItem `json:"order_items"`
 }
 
@@ -227,7 +225,7 @@ type MeliItem struct {
 */
 
 // Updates meli a publication value (stock or price)
-func updateMeli(meli_id, price, stock string) string {
+func updateMeli(meli_id, price, stock, cuenta string) string {
 
 	// Retry for a maximum of 3 times
 	maxRetries := 3
@@ -236,7 +234,7 @@ func updateMeli(meli_id, price, stock string) string {
 	for {
 
 		URL := fmt.Sprintf("https://api.mercadolibre.com/items/MLA%s", fmt.Sprint(meli_id))
-		payload := fmt.Sprintf(`{`)
+		payload := `{`
 
 		if price != "" {
 			payload = payload + fmt.Sprintf(`"price": %s,`, price)
@@ -249,7 +247,14 @@ func updateMeli(meli_id, price, stock string) string {
 			return "error creating request for meli:" + fmt.Sprint(err)
 		}
 
-		auth := "Bearer " + os.Getenv("MELI_ACCESS_TOKEN")
+		auth := ""
+
+		if cuenta == "ITEC" {
+			auth = "Bearer " + os.Getenv("MELI_ACCESS_TOKEN_ITEC")
+		} else {
+			auth = "Bearer " + os.Getenv("MELI_ACCESS_TOKEN_EG")
+		}
+
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Accept", "application/json")
 		req.Header.Set("Authorization", auth)
@@ -257,7 +262,7 @@ func updateMeli(meli_id, price, stock string) string {
 		client := http.DefaultClient
 		resp, err := client.Do(req)
 		if err != nil {
-			return "error updating product in meli:" + fmt.Sprint(err)
+			return "error sending update meli:" + fmt.Sprint(err)
 		}
 		defer resp.Body.Close()
 
@@ -280,6 +285,7 @@ func updateMeli(meli_id, price, stock string) string {
 	}
 }
 
+/*
 // productIDFromMeliID lookups the id of a product based on the meli id
 func productIDFromMeliID(meli_id string) (string, error) {
 
@@ -347,3 +353,4 @@ func productIDFromMeliID(meli_id string) (string, error) {
 
 	return "", errors.New("product searched correctly but not found in database")
 }
+*/
