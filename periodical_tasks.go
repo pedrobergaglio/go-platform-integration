@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -11,12 +10,8 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strconv"
-	"strings"
 	"time"
 
-	"github.com/PuerkitoBio/goquery"
-	"github.com/chromedp/chromedp"
 	_ "github.com/go-sql-driver/mysql"
 )
 
@@ -149,7 +144,7 @@ func refreshMeliToken() error {
 
 // checkStock calls a store procedure in the mysql database to check if
 // the stock of each product corresponds to the stored movements
-func checkStock() {
+/*func checkStock() {
 
 	log.Print("checking stock values")
 
@@ -168,7 +163,7 @@ func checkStock() {
 		rows.Close()
 	}
 
-}
+}*/
 
 func reloadCounting(user string) {
 	// Connect to the MySQL database
@@ -201,6 +196,7 @@ func reloadCounting(user string) {
 	}
 }
 
+/*
 // Scrapes and updates the value of the dollar from BNA, Rumbo, Munditol
 func updateUsdPrices() {
 
@@ -492,7 +488,7 @@ func addNewDate() {
 		rows.Close()
 	}
 
-}
+}*/
 
 // refreshPeriodically function runs every 5 hours to refresh the meli tokens,
 // check stock values, and collect alephee prices with updateRumboPricesAlephee()
@@ -632,7 +628,7 @@ func updateSosAt18() {
 
 		updateCuentasSos()
 
-		time.Sleep(24 * time.Hour)
+		time.Sleep(3 * time.Hour)
 
 	}
 }
