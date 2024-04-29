@@ -38,7 +38,7 @@ func main() {
 	go updateSosAt18()
 	go refreshPedidosProduccion()
 	go refreshPeriodically()
-	go refreshResumenBanco()
+	go refreshResumen()
 
 	// Register the webhook handler functions with the default server mux
 	//http.HandleFunc("/movement", handleASMovementWebhook)
