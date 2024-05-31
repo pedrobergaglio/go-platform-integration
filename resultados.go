@@ -110,7 +110,6 @@ data := []Data{
 	},
 }*/
 
-// Updates meli a publication value (stock or price)
 func updateHistorialResultados2(w http.ResponseWriter, r *http.Request) {
 
 	appsheet_id := "acf512aa-6952-4aaf-8d17-c200fefa116b"
@@ -177,6 +176,8 @@ func updateHistorialResultados2(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Println("Jsondata", jsonData)
+
 	// Define a struct to represent the JSON structure
 	var data []map[string]interface{}
 
@@ -188,6 +189,8 @@ func updateHistorialResultados2(w http.ResponseWriter, r *http.Request) {
 
 	// Initialize a slice to store the transformed data
 	var transformedData []map[string]interface{}
+
+	log.Println("Data", data)
 
 	// Extract fecha from the first row (assuming fecha is the same for all rows)
 	fecha := data[0]["FECHA"].(string)

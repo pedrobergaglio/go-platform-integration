@@ -512,6 +512,12 @@ def truncate():
     # Load environment variables from the .env file
     load_dotenv(dotenv_path='resources/.env')
 
+    # Verify environment variables
+    print("DATABASE_IP:", os.getenv("DATABASE_IP"))
+    print("DATABASE_USER:", os.getenv("DATABASE_USER"))
+    print("DATABASE_PASS:", os.getenv("DATABASE_PASS"))
+    print("DATABASE_NAME:", os.getenv("DATABASE_NAME"))
+
     # Define the queries
     queries = [
         "TRUNCATE CUSTOMER_ACCOUNTS;",
@@ -813,9 +819,6 @@ def scrape_deudas():
         print(response.text)
         errorflag = False
 
-
-
-
 truncate()
 login()
 periodo()
@@ -839,7 +842,13 @@ scrape_deudas()
 
 
 if error_flag:
-        print("success: data scraped and updated")
+    print("success: data scraped and updated")
+
+# add a post request to an api to notify the process finished
+now = time.time().strftime("%Y-%m-%d %H:%M:%S").replace(" ", "+")
+requests.get(
+    f"http://servicio.smsmasivos.com.ar/enviar_sms.asp?api=1&apikey=p6hery1lu5i2ngp6lceafxpm3u6lj69v841gmp4gwnmgbuvqp33oafocryekqumaj6syrb4vevvejgi24458y8ga0gw4fvgn2okk&tos=1131500591&texto=Hola%21+Se+actualizaron+los+datos+de+facturacion+de+Energia+Global,+por+favor+verificarlos.+{now}"
+)
 
 driver.quit()
 
