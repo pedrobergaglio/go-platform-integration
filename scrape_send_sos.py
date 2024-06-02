@@ -845,10 +845,8 @@ if error_flag:
     print("success: data scraped and updated")
 
 # add a post request to an api to notify the process finished
-now = str(time.time())
-requests.get(
-    f"http://servicio.smsmasivos.com.ar/enviar_sms.asp?api=1&apikey=p6hery1lu5i2ngp6lceafxpm3u6lj69v841gmp4gwnmgbuvqp33oafocryekqumaj6syrb4vevvejgi24458y8ga0gw4fvgn2okk&tos=1131500591&texto=Hola%21+Se+actualizaron+los+datos+de+facturacion+de+Energia+Global,+por+favor+verificarlos.+{now}"
-)
+#now = str(time.time())
+#requests.get(f"http://servicio.smsmasivos.com.ar/enviar_sms.asp?api=1&apikey=p6hery1lu5i2ngp6lceafxpm3u6lj69v841gmp4gwnmgbuvqp33oafocryekqumaj6syrb4vevvejgi24458y8ga0gw4fvgn2okk&tos=1131500591&texto=Hola%21+Se+actualizaron+los+datos+de+facturacion+de+Energia+Global,+por+favor+verificarlos.+{now}")
 
 driver.quit()
 
