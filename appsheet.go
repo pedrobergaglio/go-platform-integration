@@ -106,11 +106,11 @@ func handlePublicationUpdate(w http.ResponseWriter, r *http.Request) {
 		}
 
 	} else if publication.Platform == "SOS" {
-
+/*
 		error := updateSos(publication.SIVAPrice, publication.IVA, publication.ID, publication.Cuenta, publication.Producto, publication.SOSCode)
 		if error != "" {
 			log.Println("error updating product in sos:", error)
-		}
+		}*/
 
 	} else {
 		log.Println("no platform matched")
