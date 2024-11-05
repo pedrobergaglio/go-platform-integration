@@ -1,0 +1,40 @@
+Train set size: (48, 8) 
+Validation set size: (17, 8) 
+Heldout set size: (17, 8) 
+Linear Regression R^2 scores: [-0.19810147 -0.18035449 -0.88349578 -0.12125296 -0.43201818] 
+Linear Regression mean R^2 score: -0.36304457642795573 
+Random Forest R^2 scores: [-0.01842162 -0.05590846 -0.14600829 0.04593202 -0.01831036] 
+Random Forest mean R^2 score: -0.038543342053832697 
+Best model: Random Forest 
+Validation MSE: 340.94324117647056 
+Validation R^2: 0.11090921912221197
+
+
+
+
+Train set size: (61, 9)
+Validation set size: (21, 9)
+Linear Regression R^2 scores: [ 0.03709064 -0.81091679  0.00456762  0.05277643  0.05467637]
+Linear Regression mean R^2 score: -0.1323611460657985
+Random Forest R^2 scores: [-0.17949893 -0.19981854 -0.11863997  0.06629377 -0.19145224]
+Random Forest mean R^2 score: -0.12462318291118224
+Best model: Random Forest
+Validation MSE: 532.6932095238095
+Validation R^2: 0.03629040629461289
+
+
+
+Best Parameters: {'max_depth': None, 'min_samples_leaf': 4, 'min_samples_split': 2, 'n_estimators': 200}
+Best R² Score: -0.015568768186512538
+Validation MSE: 532.6932095238095
+Validation R^2: 0.03629040629461289
+
+Best Parameters: {'max_depth': None, 'min_samples_leaf': 4, 'min_samples_split': 2, 'n_estimators': 100}
+Best R² Score: 0.03238070864348843
+Validation MSE: 497.83953169573414
+Validation R^2: 0.09934513103732001
+
+Best Parameters for Linear Regression: {'fit_intercept': True}
+Best R² Score for Linear Regression: 0.0625358044661876
+Validation MSE for Linear Regression: 471.2696730760586
+Validation R^2 for Linear Regression: 0.1474133759433639
